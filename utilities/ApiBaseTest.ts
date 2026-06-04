@@ -15,7 +15,7 @@ import { LicenseCustomerClient } from '../api/clients/license/LicenseCustomerCli
 type ApiFixtures = {
   tidToken: string;
   apiContext: import('@playwright/test').APIRequestContext;
-  featureFlagClient: FeatureFlagClient;
+  featureFlagClientV3: FeatureFlagClient;
   featureFlagClientV2: FeatureFlagClient;
   sessionClient: SessionClient;
   roleClient: RoleClient;
@@ -24,9 +24,9 @@ type ApiFixtures = {
   productClient: ProductClient;
   authServiceClient: AuthServiceClient;
   userClient: UserClient;
-  licenseAccountClient: LicenseAccountClient;
+  licenseAccountClientV4: LicenseAccountClient;
   licenseAccountClientV3: LicenseAccountClient;
-  licenseClient: LicenseClient;
+  licenseClientV4: LicenseClient;
   licenseClientV3: LicenseClient;
   licenseCustomerClient: LicenseCustomerClient;
 };
@@ -39,7 +39,7 @@ export const test = base.extend<ApiFixtures>({
 
   apiContext: async ({ tidToken }, use) => {
     const ctx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: `Bearer ${tidToken}`,
         'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ export const test = base.extend<ApiFixtures>({
     await ctx.dispose();
   },
 
-  featureFlagClient: async ({ apiContext }, use) => {
+  featureFlagClientV3: async ({ apiContext }, use) => {
     const client = new FeatureFlagClient(apiContext, 'v3');
     await use(client);
   },
@@ -94,7 +94,7 @@ export const test = base.extend<ApiFixtures>({
     await use(client);
   },
 
-  licenseAccountClient: async ({ apiContext }, use) => {
+  licenseAccountClientV4: async ({ apiContext }, use) => {
     const client = new LicenseAccountClient(apiContext);
     await use(client);
   },
@@ -104,7 +104,7 @@ export const test = base.extend<ApiFixtures>({
     await use(client);
   },
 
-  licenseClient: async ({ apiContext }, use) => {
+  licenseClientV4: async ({ apiContext }, use) => {
     const client = new LicenseClient(apiContext);
     await use(client);
   },

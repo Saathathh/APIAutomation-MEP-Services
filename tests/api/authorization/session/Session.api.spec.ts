@@ -26,9 +26,30 @@ test.describe('Session Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('GET Session - should validate response schema', async ({ sessionClient }) => {
+    const response = await sessionClient.getSession();
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: must have a token field containing a valid JWT
+    expect(body).toHaveProperty('token');
+    expect(typeof body.token).toBe('string');
+    expect(body.token.length).toBeGreaterThan(0);
+    // Validate JWT format (header.payload.signature)
+    const parts = body.token.split('.');
+    expect(parts).toHaveLength(3);
+    // Validate payload is decodable JSON
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    expect(typeof payload).toBe('object');
+    expect(payload).not.toBeNull();
+  });
+
   test('GET Session - should return 400 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/authorizations/Session?api-version=1.0');
@@ -42,7 +63,7 @@ test.describe('Session Service API Tests', () => {
 
   test('GET Session - should return error with no authorization header', async ({}) => {
     const noAuthCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
     });
     const response = await noAuthCtx.get('/authorizations/Session?api-version=1.0');
     await test.info().attach('API Response', {
@@ -55,7 +76,7 @@ test.describe('Session Service API Tests', () => {
 
   test('GET Session - should return error with expired token', async ({}) => {
     const expiredCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.expired.signature' },
     });
     const response = await expiredCtx.get('/authorizations/Session?api-version=1.0');
@@ -82,9 +103,31 @@ test.describe('Session Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('POST Refresh Session - should validate response schema', async ({ sessionClient, tidToken }) => {
+    const expires = 3600;
+    const response = await sessionClient.refreshSession(expires, tidToken);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: must have a token field containing a valid JWT
+    expect(body).toHaveProperty('token');
+    expect(typeof body.token).toBe('string');
+    expect(body.token.length).toBeGreaterThan(0);
+    // Validate JWT format (header.payload.signature)
+    const parts = body.token.split('.');
+    expect(parts).toHaveLength(3);
+    // Validate payload is decodable JSON
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    expect(typeof payload).toBe('object');
+    expect(payload).not.toBeNull();
+  });
+
   test('POST Refresh Session - should return 400 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
@@ -147,7 +190,7 @@ test.describe('Session Service API Tests', () => {
 
   test('DELETE Session - should return 200 with invalid token path param', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.delete(

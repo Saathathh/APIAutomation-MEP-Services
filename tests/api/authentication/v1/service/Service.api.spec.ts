@@ -15,7 +15,7 @@ test.describe('Auth Service Health API Tests', () => {
 
   test('GET Health - should return 200 without token', async ({}) => {
     const ctx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
     });
     const response = await ctx.get('/authentications/Service/Health');
     const body = await response.text();

@@ -35,9 +35,31 @@ test.describe('Role Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('GET All Roles - should validate response schema', async ({ roleClient }) => {
+    const response = await roleClient.getAllRoles();
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: response is an object with UUID keys mapping to arrays of role name strings
+    expect(typeof body).toBe('object');
+    expect(body).not.toBeNull();
+    const keys = Object.keys(body);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      expect(Array.isArray(body[key])).toBeTruthy();
+      for (const role of body[key]) {
+        expect(typeof role).toBe('string');
+        expect(role.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
   test('GET All Roles - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/authorizations/Role?api-version=1.0');
@@ -51,7 +73,7 @@ test.describe('Role Service API Tests', () => {
 
   test('GET All Roles - should return 401 with no authorization header', async ({}) => {
     const noAuthCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
     });
     const response = await noAuthCtx.get('/authorizations/Role?api-version=1.0');
     await test.info().attach('API Response', {
@@ -76,9 +98,25 @@ test.describe('Role Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('GET Specific Role - should validate response schema', async ({ roleClient }) => {
+    const response = await roleClient.getRole(ROLE_UUID);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: response should be an array of role name strings for this UUID
+    expect(Array.isArray(body)).toBeTruthy();
+    for (const role of body) {
+      expect(typeof role).toBe('string');
+      expect(role.length).toBeGreaterThan(0);
+    }
+  });
+
   test('GET Specific Role - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(
@@ -116,9 +154,29 @@ test.describe('Role Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('POST Create Role - should validate response schema', async ({ roleClient }) => {
+    const response = await roleClient.createRole(ROLE_UUID, CREATE_ROLE_PAYLOAD);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: response is an array of role name strings that were created
+    expect(Array.isArray(body)).toBeTruthy();
+    for (const role of body) {
+      expect(typeof role).toBe('string');
+      expect(role.length).toBeGreaterThan(0);
+    }
+    // Verify the created role name is in the response
+    expect(body).toContain(TEST_ROLE_NAME);
+    // Cleanup
+    await roleClient.deleteRole(ROLE_UUID, CREATE_ROLE_PAYLOAD);
+  });
+
   test('POST Create Role - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
@@ -137,9 +195,9 @@ test.describe('Role Service API Tests', () => {
 
   test('POST Create Role - should return 405 without UUID', async ({}) => {
     const ctx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
-        Authorization: `Bearer ${process.env.FF_CACHED_TOKEN}`,
+        Authorization: `Bearer ${process.env.CACHED_TOKEN}`,
         'Content-Type': 'application/json',
       },
     });
@@ -216,9 +274,22 @@ test.describe('Role Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('POST Delete Role - should validate response schema', async ({ roleClient }) => {
+    await roleClient.createRole(ROLE_UUID, CREATE_ROLE_PAYLOAD);
+    const response = await roleClient.deleteRole(ROLE_UUID, CREATE_ROLE_PAYLOAD);
+    expect(response.status()).toBe(200);
+    const body = await response.text();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: delete role returns empty body on success
+    expect(body === '' || body === '[]').toBeTruthy();
+  });
+
   test('POST Delete Role - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.post(

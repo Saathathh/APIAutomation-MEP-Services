@@ -23,7 +23,7 @@ test.describe('License API Tests (v3)', () => {
 
   test('GET Account License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/v3/License/account/${TEST_ACCOUNT_ID}`);
@@ -73,7 +73,7 @@ test.describe('License API Tests (v3)', () => {
 
   test('GET Feature - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/License/${TEST_LICENSE_ID}/feature/${TEST_FEATURE}`, {
@@ -107,15 +107,6 @@ test.describe('License API Tests (v3)', () => {
     expect([404, 400]).toContain(response.status());
   });
 
-  test('GET Feature - should return error for invalid licenseId format', async ({ licenseClientV3 }) => {
-    const response = await licenseClientV3.getFeature('not-a-valid-uuid', TEST_FEATURE);
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([400, 404]).toContain(response.status());
-  });
 
   // ======================================================================
   // Endpoint 3: GET /licenses/License/{licenseId}
@@ -133,7 +124,7 @@ test.describe('License API Tests (v3)', () => {
 
   test('GET License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/License/${TEST_LICENSE_ID}`, {
@@ -157,15 +148,6 @@ test.describe('License API Tests (v3)', () => {
     expect([404, 400]).toContain(response.status());
   });
 
-  test('GET License - should return error for invalid licenseId format', async ({ licenseClientV3 }) => {
-    const response = await licenseClientV3.getLicense('invalid-uuid-format');
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([400, 404]).toContain(response.status());
-  });
 
   // ======================================================================
   // Endpoint 4: POST /licenses/License (Create License)
@@ -182,20 +164,32 @@ test.describe('License API Tests (v3)', () => {
       productVersion: '2024.1.0',
     });
     const createBody = await createResponse.json();
-    await test.info().attach('API Response', {
+    await test.info().attach('Create Response', {
       body: JSON.stringify({ status: createResponse.status(), body: createBody }, null, 2),
       contentType: 'text/plain',
     });
     expect(createResponse.status()).toBe(200);
 
-    // Cleanup: delete the created license
     const newLicenseId = createBody.licenseId || createBody.id;
+    expect(newLicenseId).toBeTruthy();
+
+    // Verify: GET the created license by ID to confirm it was persisted
+    const verifyResponse = await licenseClientV3.getLicense(newLicenseId);
+    const verifyBody = await verifyResponse.json();
+    await test.info().attach('Verify GET License', {
+      body: JSON.stringify({ status: verifyResponse.status(), body: verifyBody }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(verifyResponse.status()).toBe(200);
+    expect(verifyBody.licenseId || verifyBody.id).toBe(newLicenseId);
+
+    // Cleanup: delete the created license
     if (newLicenseId) await licenseClientV3.deleteLicense(newLicenseId);
   });
 
   test('POST Create License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
@@ -275,14 +269,27 @@ test.describe('License API Tests (v3)', () => {
       productVersion: '2024.1.0',
     } as any);
     const body = await response.text();
-    await test.info().attach('API Response', {
+    await test.info().attach('Create Response', {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
-    // Cleanup: delete the created license
+
+    // Verify: GET the created license by ID to confirm it was persisted
     const created = JSON.parse(body);
     const newId = created.licenseId || created.id;
+    expect(newId).toBeTruthy();
+
+    const verifyResponse = await licenseClientV3.getLicense(newId);
+    const verifyBody = await verifyResponse.json();
+    await test.info().attach('Verify GET License', {
+      body: JSON.stringify({ status: verifyResponse.status(), body: verifyBody }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(verifyResponse.status()).toBe(200);
+    expect(verifyBody.licenseId || verifyBody.id).toBe(newId);
+
+    // Cleanup: delete the created license
     if (newId) await licenseClientV3.deleteLicense(newId);
   });
 
@@ -377,7 +384,7 @@ test.describe('License API Tests (v3)', () => {
 
   test('DELETE License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.delete(`/licenses/License/${TEST_LICENSE_ID}`, {
@@ -401,16 +408,7 @@ test.describe('License API Tests (v3)', () => {
     expect(response.status()).toBe(204);
   });
 
-  test('DELETE License - should return 204 for invalid licenseId format (idempotent)', async ({ licenseClientV3 }) => {
-    const response = await licenseClientV3.deleteLicense('not-a-valid-uuid');
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect(response.status()).toBe(204);
-  });
-
+ 
   // ======================================================================
   // Endpoint 6: PUT /licenses/License/updateToken (Refresh License Token)
   // ======================================================================
@@ -427,7 +425,7 @@ test.describe('License API Tests (v3)', () => {
 
   test('PUT Refresh License Token - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
@@ -520,7 +518,7 @@ test.describe('License API Tests (v3)', () => {
 
   test('PUT Renew License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',

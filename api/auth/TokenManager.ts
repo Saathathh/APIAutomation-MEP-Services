@@ -79,14 +79,14 @@ export async function getTidToken(): Promise<string> {
   if (cached) return cached;
 
   // OAuth Implicit flow (response_type=token) — matches Postman config exactly
-  const authorizeEndpoint = process.env.FF_AUTH_URL!;
+  const authorizeEndpoint = process.env.AUTH_URL!;
   const redirectUri = 'https://oauth.pstmn.io/v1/callback';
   const authorizeUrl = `${authorizeEndpoint}?` +
     new URLSearchParams({
-      client_id: process.env.FF_CLIENT_ID!,
+      client_id: process.env.CLIENT_ID!,
       response_type: 'token',
       redirect_uri: redirectUri,
-      scope: process.env.FF_SCOPE!,
+      scope: process.env.SCOPE!,
     }).toString();
 
   const browser = await chromium.launch({
@@ -114,7 +114,7 @@ export async function getTidToken(): Promise<string> {
     const emailInput = page.locator('input:visible').first();
     await emailInput.waitFor({ timeout: 60000 });
     await emailInput.click();
-    await page.keyboard.type(process.env.FF_EMAIL!, { delay: 50 });
+    await page.keyboard.type(process.env.EMAIL!, { delay: 50 });
 
     // Click next to go to Okta
     const nextBtn = page.locator('#enter_username_submit');
@@ -128,12 +128,12 @@ export async function getTidToken(): Promise<string> {
     // Step 2: Okta login page — enter username
     const oktaUsernameInput = page.locator('input[type="text"]:visible, input[name="username"]:visible, input[name="identifier"]:visible').first();
     await oktaUsernameInput.waitFor({ timeout: 60000 });
-    await oktaUsernameInput.fill(process.env.FF_USERNAME!);
+    await oktaUsernameInput.fill(process.env.USERNAME!);
 
     // Enter password
     const passwordInput = page.locator('input[type="password"]:visible').first();
     await passwordInput.waitFor({ timeout: 60000 });
-    await passwordInput.fill(process.env.FF_PASSWORD!);
+    await passwordInput.fill(process.env.PASSWORD!);
 
     // Click sign-in on Okta
     const signInBtn = page.locator('button[type="submit"], input[type="submit"]').first();

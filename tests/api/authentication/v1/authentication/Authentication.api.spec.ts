@@ -28,7 +28,7 @@ test.describe('Authentication Service API Tests', () => {
 
   test('POST Customer - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.post(
@@ -56,7 +56,7 @@ test.describe('Authentication Service API Tests', () => {
 
   test('GET CustomPing - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(

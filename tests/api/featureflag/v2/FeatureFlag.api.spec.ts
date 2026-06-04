@@ -20,7 +20,7 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
 
   test('GET ListAvailable - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/featureflags/v2/Flags/ListAvailable');
@@ -46,7 +46,7 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
 
   test('GET ListAvailable - should return 401 with expired token', async ({}) => {
     const expiredCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.expired.signature' },
     });
     const response = await expiredCtx.get('/featureflags/v2/Flags/ListAvailable');
@@ -60,7 +60,7 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
 
   test('GET ListAvailable - should return 401 with no authorization header', async ({}) => {
     const noAuthCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
     });
     const response = await noAuthCtx.get('/featureflags/v2/Flags/ListAvailable');
     await test.info().attach('API Response', {
@@ -88,7 +88,7 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
 
   test('GET IsAvailable - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/featureflags/v2/Flags/IsAvailable/FeatureTest1');
@@ -158,7 +158,7 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
 
   test('GET ListAvailable by category - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/featureflags/v2/Flags/ListAvailable/QA');

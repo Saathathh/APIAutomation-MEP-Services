@@ -58,9 +58,29 @@ test.describe('Claim Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('POST Add Claims - should validate response schema', async ({ claimClient }) => {
+    const response = await claimClient.addClaims(CLAIM_UUID, CLAIMS_PAYLOAD);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: response must contain a JWT token
+    expect(body).toHaveProperty('token');
+    expect(typeof body.token).toBe('string');
+    // Validate JWT format (3 dot-separated base64 parts)
+    const parts = body.token.split('.');
+    expect(parts).toHaveLength(3);
+    // Validate payload is decodable JSON
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    expect(typeof payload).toBe('object');
+    expect(payload).not.toBeNull();
+  });
+
   test('POST Add Claims - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token', 'Content-Type': 'application/json' },
     });
     const response = await unauthorizedCtx.post(
@@ -151,9 +171,30 @@ test.describe('Claim Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('POST Remove Claims - should validate response schema', async ({ claimClient }) => {
+    await claimClient.addClaims(CLAIM_UUID, CLAIMS_PAYLOAD);
+    const response = await claimClient.removeClaims(CLAIM_UUID, CLAIMS_PAYLOAD);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: response must contain a JWT token
+    expect(body).toHaveProperty('token');
+    expect(typeof body.token).toBe('string');
+    // Validate JWT format (3 dot-separated base64 parts)
+    const parts = body.token.split('.');
+    expect(parts).toHaveLength(3);
+    // Validate payload is decodable JSON
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    expect(typeof payload).toBe('object');
+    expect(payload).not.toBeNull();
+  });
+
   test('POST Remove Claims - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token', 'Content-Type': 'application/json' },
     });
     const response = await unauthorizedCtx.post(
@@ -214,9 +255,26 @@ test.describe('Claim Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('DELETE All Claims - should validate response schema', async ({ claimClient }) => {
+    // Add claims first so delete has something to clear
+    await claimClient.addClaims(CLAIM_UUID, CLAIMS_PAYLOAD);
+    const response = await claimClient.deleteAllClaims(CLAIM_UUID);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Schema: response must contain a JWT token after claims deletion
+    expect(body).toHaveProperty('token');
+    expect(typeof body.token).toBe('string');
+    const parts = body.token.split('.');
+    expect(parts).toHaveLength(3);
+  });
+
   test('DELETE All Claims - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.delete(

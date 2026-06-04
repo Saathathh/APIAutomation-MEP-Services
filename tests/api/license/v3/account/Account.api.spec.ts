@@ -24,7 +24,7 @@ test.describe('License Account API Tests (v3)', () => {
 
   test('GET Account - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/licenses/Account', {
@@ -75,7 +75,7 @@ test.describe('License Account API Tests (v3)', () => {
 
   test('GET Feature - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/Account/${TEST_ACCOUNT_ID}/feature/${TEST_FEATURE}`, {
@@ -145,7 +145,7 @@ test.describe('License Account API Tests (v3)', () => {
 
   test('POST Cache Reset - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',

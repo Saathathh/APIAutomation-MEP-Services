@@ -32,7 +32,7 @@ test.describe('Product Service API Tests', () => {
 
   test('PUT Register Product - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.put('/authentications/Product', {
@@ -64,7 +64,7 @@ test.describe('Product Service API Tests', () => {
 
   test('GET Product - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/authentications/Product/${PRODUCT_PAYLOAD.id}`);

@@ -21,7 +21,7 @@ test.describe('License Customer API Tests (v1)', () => {
 
   test('GET User by Email - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/v1/user/${encodeURIComponent(TEST_EMAIL)}`);
@@ -58,7 +58,7 @@ test.describe('License Customer API Tests (v1)', () => {
 
   test('GET Customer ListAll - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/licenses/Customer/listall', {
@@ -88,7 +88,7 @@ test.describe('License Customer API Tests (v1)', () => {
 
   test('GET Customer List - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get('/licenses/Customer/list', {

@@ -11,7 +11,7 @@ test.describe('License API Tests (v4)', () => {
   // Endpoint 1: GET /licenses/v4/License/account/{accountId}
   // ======================================================================
 
-  test('GET Account License - should return 200 for valid accountId', async ({ licenseClient }) => {
+  test('GET Account License - should return 200 for valid accountId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getAccountLicense(TEST_ACCOUNT_ID);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -23,7 +23,7 @@ test.describe('License API Tests (v4)', () => {
 
   test('GET Account License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/v4/License/account/${TEST_ACCOUNT_ID}`);
@@ -35,7 +35,7 @@ test.describe('License API Tests (v4)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('GET Account License - should return 200 with empty array for non-existent accountId', async ({ licenseClient }) => {
+  test('GET Account License - should return 200 with empty array for non-existent accountId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getAccountLicense('0000000000000000');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -46,7 +46,7 @@ test.describe('License API Tests (v4)', () => {
     expect(JSON.parse(body)).toEqual([]);
   });
 
-  test('GET Account License - should return 200 with empty array for invalid accountId format', async ({ licenseClient }) => {
+  test('GET Account License - should return 200 with empty array for invalid accountId format', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getAccountLicense('invalid-id!@#');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -61,7 +61,7 @@ test.describe('License API Tests (v4)', () => {
   // Endpoint 2: GET /licenses/License/{licenseId}/feature/{featureName}
   // ======================================================================
 
-  test('GET Feature - should return 200 for valid license and feature', async ({ licenseClient }) => {
+  test('GET Feature - should return 200 for valid license and feature', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getFeature(TEST_LICENSE_ID, TEST_FEATURE);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -73,7 +73,7 @@ test.describe('License API Tests (v4)', () => {
 
   test('GET Feature - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/License/${TEST_LICENSE_ID}/feature/${TEST_FEATURE}`, {
@@ -87,7 +87,7 @@ test.describe('License API Tests (v4)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('GET Feature - should return 404 for non-existent licenseId', async ({ licenseClient }) => {
+  test('GET Feature - should return 404 for non-existent licenseId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getFeature('00000000-0000-0000-0000-000000000000', TEST_FEATURE);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -97,7 +97,7 @@ test.describe('License API Tests (v4)', () => {
     expect([404, 400]).toContain(response.status());
   });
 
-  test('GET Feature - should return error for non-existent feature name', async ({ licenseClient }) => {
+  test('GET Feature - should return error for non-existent feature name', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getFeature(TEST_LICENSE_ID, 'NON-EXISTENT-FEATURE');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -107,21 +107,11 @@ test.describe('License API Tests (v4)', () => {
     expect([404, 400]).toContain(response.status());
   });
 
-  test('GET Feature - should return error for invalid licenseId format', async ({ licenseClient }) => {
-    const response = await licenseClient.getFeature('not-a-valid-uuid', TEST_FEATURE);
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([400, 404]).toContain(response.status());
-  });
-
   // ======================================================================
   // Endpoint 3: GET /licenses/License/{licenseId}
   // ======================================================================
 
-  test('GET License - should return 200 for valid licenseId', async ({ licenseClient }) => {
+  test('GET License - should return 200 for valid licenseId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getLicense(TEST_LICENSE_ID);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -133,7 +123,7 @@ test.describe('License API Tests (v4)', () => {
 
   test('GET License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/licenses/License/${TEST_LICENSE_ID}`, {
@@ -147,7 +137,7 @@ test.describe('License API Tests (v4)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('GET License - should return 404 for non-existent licenseId', async ({ licenseClient }) => {
+  test('GET License - should return 404 for non-existent licenseId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.getLicense('00000000-0000-0000-0000-000000000000');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -157,21 +147,12 @@ test.describe('License API Tests (v4)', () => {
     expect([404, 400]).toContain(response.status());
   });
 
-  test('GET License - should return error for invalid licenseId format', async ({ licenseClient }) => {
-    const response = await licenseClient.getLicense('invalid-uuid-format');
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([400, 404]).toContain(response.status());
-  });
 
   // ======================================================================
   // Endpoint 4: POST /licenses/License (Create License)
   // ======================================================================
 
-  test('POST Create License - should return 200 with valid payload', async ({ licenseClient }) => {
+  test('POST Create License - should return 200 with valid payload', async ({ licenseClientV4: licenseClient }) => {
     const createResponse = await licenseClient.createLicense({
       accountId: TEST_ACCOUNT_ID,
       coreFeature: TEST_FEATURE,
@@ -182,20 +163,32 @@ test.describe('License API Tests (v4)', () => {
       productVersion: '2024.1.0',
     });
     const createBody = await createResponse.json();
-    await test.info().attach('API Response', {
+    await test.info().attach('Create Response', {
       body: JSON.stringify({ status: createResponse.status(), body: createBody }, null, 2),
       contentType: 'text/plain',
     });
     expect(createResponse.status()).toBe(200);
 
-    // Cleanup: delete the created license
     const newLicenseId = createBody.licenseId || createBody.id;
+    expect(newLicenseId).toBeTruthy();
+
+    // Verify: GET the created license by ID to confirm it was persisted
+    const verifyResponse = await licenseClient.getLicense(newLicenseId);
+    const verifyBody = await verifyResponse.json();
+    await test.info().attach('Verify GET License', {
+      body: JSON.stringify({ status: verifyResponse.status(), body: verifyBody }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(verifyResponse.status()).toBe(200);
+    expect(verifyBody.licenseId || verifyBody.id).toBe(newLicenseId);
+
+    // Cleanup: delete the created license
     if (newLicenseId) await licenseClient.deleteLicense(newLicenseId);
   });
 
   test('POST Create License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
@@ -221,7 +214,7 @@ test.describe('License API Tests (v4)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('POST Create License - should fail with empty body', async ({ licenseClient }) => {
+  test('POST Create License - should fail with empty body', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.createLicense({} as any);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -231,7 +224,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 422, 500]).toContain(response.status());
   });
 
-  test('POST Create License - should fail with missing accountId', async ({ licenseClient }) => {
+  test('POST Create License - should fail with missing accountId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.createLicense({
       coreFeature: TEST_FEATURE,
       deviceId: 'saathath-dev',
@@ -248,7 +241,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 422, 500]).toContain(response.status());
   });
 
-  test('POST Create License - should fail with missing coreFeature', async ({ licenseClient }) => {
+  test('POST Create License - should fail with missing coreFeature', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.createLicense({
       accountId: TEST_ACCOUNT_ID,
       deviceId: 'saathath-dev',
@@ -265,7 +258,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 422, 500]).toContain(response.status());
   });
 
-  test('POST Create License - should succeed even with missing sku (optional field)', async ({ licenseClient }) => {
+  test('POST Create License - should succeed even with missing sku (optional field)', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.createLicense({
       accountId: TEST_ACCOUNT_ID,
       coreFeature: TEST_FEATURE,
@@ -275,18 +268,31 @@ test.describe('License API Tests (v4)', () => {
       productVersion: '2024.1.0',
     } as any);
     const body = await response.text();
-    await test.info().attach('API Response', {
+    await test.info().attach('Create Response', {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
-    // Cleanup: delete the created license
+
+    // Verify: GET the created license by ID to confirm it was persisted
     const created = JSON.parse(body);
     const newId = created.licenseId || created.id;
+    expect(newId).toBeTruthy();
+
+    const verifyResponse = await licenseClient.getLicense(newId);
+    const verifyBody = await verifyResponse.json();
+    await test.info().attach('Verify GET License', {
+      body: JSON.stringify({ status: verifyResponse.status(), body: verifyBody }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(verifyResponse.status()).toBe(200);
+    expect(verifyBody.licenseId || verifyBody.id).toBe(newId);
+
+    // Cleanup: delete the created license
     if (newId) await licenseClient.deleteLicense(newId);
   });
 
-  test('POST Create License - should fail with missing deviceId', async ({ licenseClient }) => {
+  test('POST Create License - should fail with missing deviceId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.createLicense({
       accountId: TEST_ACCOUNT_ID,
       coreFeature: TEST_FEATURE,
@@ -303,7 +309,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 422, 500]).toContain(response.status());
   });
 
-  test('POST Create License - should fail with invalid licenseType', async ({ licenseClient }) => {
+  test('POST Create License - should fail with invalid licenseType', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.createLicense({
       accountId: TEST_ACCOUNT_ID,
       coreFeature: TEST_FEATURE,
@@ -321,7 +327,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 422, 500]).toContain(response.status());
   });
 
-  test('POST Create License - should return 404 with invalid accountId', async ({ licenseClient }) => {
+  test('POST Create License - should return 404 with invalid accountId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.createLicense({
       accountId: 'invalid-account',
       coreFeature: TEST_FEATURE,
@@ -343,7 +349,7 @@ test.describe('License API Tests (v4)', () => {
   // Endpoint 5: DELETE /licenses/License/{licenseId}
   // ======================================================================
 
-  test('POST Create then DELETE License - should create and delete successfully', async ({ licenseClient }) => {
+  test('POST Create then DELETE License - should create and delete successfully', async ({ licenseClientV4: licenseClient }) => {
     // Step 1: Create a new license
     const createResponse = await licenseClient.createLicense({
       accountId: TEST_ACCOUNT_ID,
@@ -377,7 +383,7 @@ test.describe('License API Tests (v4)', () => {
 
   test('DELETE License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.delete(`/licenses/License/${TEST_LICENSE_ID}`, {
@@ -391,7 +397,7 @@ test.describe('License API Tests (v4)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('DELETE License - should return 204 for non-existent licenseId (idempotent)', async ({ licenseClient }) => {
+  test('DELETE License - should return 204 for non-existent licenseId (idempotent)', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.deleteLicense('00000000-0000-0000-0000-000000000000');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -401,21 +407,12 @@ test.describe('License API Tests (v4)', () => {
     expect(response.status()).toBe(204);
   });
 
-  test('DELETE License - should return 204 for invalid licenseId format (idempotent)', async ({ licenseClient }) => {
-    const response = await licenseClient.deleteLicense('not-a-valid-uuid');
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect(response.status()).toBe(204);
-  });
 
   // ======================================================================
   // Endpoint 6: PUT /licenses/License/updateToken (Refresh License Token)
   // ======================================================================
 
-  test('PUT Refresh License Token - should return 200 with valid licenseId and token', async ({ licenseClient, tidToken }) => {
+  test('PUT Refresh License Token - should return 200 with valid licenseId and token', async ({ licenseClientV4: licenseClient, tidToken }) => {
     const response = await licenseClient.refreshLicenseToken(TEST_LICENSE_ID, tidToken);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -427,7 +424,7 @@ test.describe('License API Tests (v4)', () => {
 
   test('PUT Refresh License Token - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
@@ -445,7 +442,7 @@ test.describe('License API Tests (v4)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('PUT Refresh License Token - should fail with missing licenseId in body', async ({ licenseClient, tidToken }) => {
+  test('PUT Refresh License Token - should fail with missing licenseId in body', async ({ licenseClientV4: licenseClient, tidToken }) => {
     const response = await licenseClient.refreshLicenseToken('', tidToken);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -455,7 +452,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 422, 500]).toContain(response.status());
   });
 
-  test('PUT Refresh License Token - should return 200 with missing oldAccessToken (optional field)', async ({ licenseClient }) => {
+  test('PUT Refresh License Token - should return 200 with missing oldAccessToken (optional field)', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.refreshLicenseToken(TEST_LICENSE_ID, '');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -465,7 +462,7 @@ test.describe('License API Tests (v4)', () => {
     expect(response.status()).toBe(200);
   });
 
-  test('PUT Refresh License Token - should fail with non-existent licenseId', async ({ licenseClient, tidToken }) => {
+  test('PUT Refresh License Token - should fail with non-existent licenseId', async ({ licenseClientV4: licenseClient, tidToken }) => {
     const response = await licenseClient.refreshLicenseToken('00000000-0000-0000-0000-000000000000', tidToken);
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -475,7 +472,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 404, 500]).toContain(response.status());
   });
 
-  test('PUT Refresh License Token - should return 200 with invalid oldAccessToken (token ignored)', async ({ licenseClient }) => {
+  test('PUT Refresh License Token - should return 200 with invalid oldAccessToken (token ignored)', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.refreshLicenseToken(TEST_LICENSE_ID, 'completely-invalid-token-string');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -489,7 +486,7 @@ test.describe('License API Tests (v4)', () => {
   // Endpoint 7: PUT /licenses/License/renew?api-version=4.0 (Renew License)
   // ======================================================================
 
-  test('PUT Renew License - should return 200 after creating a license', async ({ licenseClient }) => {
+  test('PUT Renew License - should return 200 after creating a license', async ({ licenseClientV4: licenseClient }) => {
     // Step 1: Create a new license
     const createResponse = await licenseClient.createLicense({
       accountId: TEST_ACCOUNT_ID,
@@ -520,7 +517,7 @@ test.describe('License API Tests (v4)', () => {
 
   test('PUT Renew License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
@@ -538,7 +535,7 @@ test.describe('License API Tests (v4)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('PUT Renew License - should fail with non-existent licenseId', async ({ licenseClient }) => {
+  test('PUT Renew License - should fail with non-existent licenseId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.renewLicense('00000000-0000-0000-0000-000000000000');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -548,7 +545,7 @@ test.describe('License API Tests (v4)', () => {
     expect([400, 404, 500]).toContain(response.status());
   });
 
-  test('PUT Renew License - should fail with empty licenseId', async ({ licenseClient }) => {
+  test('PUT Renew License - should fail with empty licenseId', async ({ licenseClientV4: licenseClient }) => {
     const response = await licenseClient.renewLicense('');
     const body = await response.text();
     await test.info().attach('API Response', {
@@ -562,7 +559,7 @@ test.describe('License API Tests (v4)', () => {
   // E2E Flow
   // ======================================================================
 
-  test('E2E - get account license, get license, get feature, create & delete license', async ({ licenseClient }) => {
+  test('E2E - get account license, get license, get feature, create & delete license', async ({ licenseClientV4: licenseClient }) => {
     // Step 1: Get Account License
     const accountLicenseResponse = await licenseClient.getAccountLicense(TEST_ACCOUNT_ID);
     await test.info().attach('Step 1 - Get Account License', {

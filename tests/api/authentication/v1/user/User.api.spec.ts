@@ -44,7 +44,7 @@ test.describe('User Service API Tests', () => {
 
   test('GET User by UUID - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/authentications/User/${TEST_UUID}`);
@@ -70,7 +70,7 @@ test.describe('User Service API Tests', () => {
 
   test('GET User by Email - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
     });
     const response = await unauthorizedCtx.get(`/authentications/User/email/${TEST_EMAIL}`);
@@ -96,7 +96,7 @@ test.describe('User Service API Tests', () => {
 
   test('POST Create/Update User - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.FF_BASE_URL,
+      baseURL: process.env.BASE_URL,
       extraHTTPHeaders: {
         Authorization: 'Bearer invalid_token',
         'Content-Type': 'application/json',
