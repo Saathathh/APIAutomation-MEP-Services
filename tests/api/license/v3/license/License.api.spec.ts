@@ -21,6 +21,28 @@ test.describe('License API Tests (v3)', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('GET Account License - should validate response schema', async ({ licenseClientV3 }) => {
+    const response = await licenseClientV3.getAccountLicense(TEST_ACCOUNT_ID);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(Array.isArray(body)).toBeTruthy();
+    expect(body.length).toBeGreaterThan(0);
+    const item = body[0];
+    expect(item).toHaveProperty('accountId');
+    expect(typeof item.accountId).toBe('string');
+    expect(item.accountId).toBe(TEST_ACCOUNT_ID);
+    expect(item).toHaveProperty('licenseId');
+    expect(typeof item.licenseId).toBe('string');
+    expect(item).toHaveProperty('deviceId');
+    expect(typeof item.deviceId).toBe('string');
+    expect(item).toHaveProperty('coreFeature');
+    expect(typeof item.coreFeature).toBe('string');
+  });
+
   test('GET Account License - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
@@ -71,6 +93,36 @@ test.describe('License API Tests (v3)', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('GET Feature - should validate response schema', async ({ licenseClientV3 }) => {
+    // Get an existing license from the account to avoid race conditions
+    const accountResp = await licenseClientV3.getAccountLicense(TEST_ACCOUNT_ID);
+    const accountLicenses = await accountResp.json();
+    expect(accountLicenses.length).toBeGreaterThan(0);
+    const licenseId = accountLicenses[0].licenseId;
+
+    const response = await licenseClientV3.getFeature(licenseId, TEST_FEATURE);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('accountId');
+    expect(typeof body.accountId).toBe('string');
+    expect(body.accountId).toBe(TEST_ACCOUNT_ID);
+    expect(body).toHaveProperty('featureId');
+    expect(typeof body.featureId).toBe('string');
+    expect(body.featureId).toBe(TEST_FEATURE);
+    expect(body).toHaveProperty('startDate');
+    expect(typeof body.startDate).toBe('string');
+    expect(body).toHaveProperty('endDate');
+    expect(typeof body.endDate).toBe('string');
+    expect(body).toHaveProperty('limit');
+    expect(typeof body.limit).toBe('number');
+    expect(body).toHaveProperty('limitUnit');
+    expect(typeof body.limitUnit).toBe('string');
+  });
+
   test('GET Feature - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
@@ -116,10 +168,43 @@ test.describe('License API Tests (v3)', () => {
     const response = await licenseClientV3.getLicense(TEST_LICENSE_ID);
     const body = await response.text();
     await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body: JSON.parse(body) }, null, 2),
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
+  });
+
+  test('GET License - should validate response schema', async ({ licenseClientV3 }) => {
+    // Get an existing license from the account to avoid race conditions
+    const accountResp = await licenseClientV3.getAccountLicense(TEST_ACCOUNT_ID);
+    const accountLicenses = await accountResp.json();
+    expect(accountLicenses.length).toBeGreaterThan(0);
+    const licenseId = accountLicenses[0].licenseId;
+
+    const response = await licenseClientV3.getLicense(licenseId);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('accountId');
+    expect(typeof body.accountId).toBe('string');
+    expect(body.accountId).toBe(TEST_ACCOUNT_ID);
+    expect(body).toHaveProperty('id');
+    expect(typeof body.id).toBe('string');
+    expect(body.id).toBe(licenseId);
+    expect(body).toHaveProperty('accountName');
+    expect(typeof body.accountName).toBe('string');
+    expect(body).toHaveProperty('features');
+    expect(Array.isArray(body.features)).toBeTruthy();
+    expect(body.features.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('sku');
+    expect(typeof body.sku).toBe('string');
+    expect(body).toHaveProperty('productName');
+    expect(typeof body.productName).toBe('string');
+    expect(body).toHaveProperty('emsVersion');
+    expect(typeof body.emsVersion).toBe('string');
   });
 
   test('GET License - should return 401 without valid token', async ({}) => {
@@ -185,6 +270,44 @@ test.describe('License API Tests (v3)', () => {
 
     // Cleanup: delete the created license
     if (newLicenseId) await licenseClientV3.deleteLicense(newLicenseId);
+  });
+
+  test('POST Create License - should validate response schema', async ({ licenseClientV3 }) => {
+    const createResponse = await licenseClientV3.createLicense({
+      accountId: TEST_ACCOUNT_ID,
+      coreFeature: TEST_FEATURE,
+      deviceId: 'saathath-dev',
+      sku: 'BN-SB-ESTMEP-PRO',
+      licenseType: 1,
+      productName: 'Trimble Construction One Estimation MEP Pro - Named User Subscription',
+      productVersion: '2024.1.0',
+    });
+    expect(createResponse.status()).toBe(200);
+    const body = await createResponse.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: createResponse.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('accountId');
+    expect(typeof body.accountId).toBe('string');
+    expect(body.accountId).toBe(TEST_ACCOUNT_ID);
+    expect(body).toHaveProperty('accountName');
+    expect(typeof body.accountName).toBe('string');
+    expect(body).toHaveProperty('id');
+    expect(typeof body.id).toBe('string');
+    expect(body.id.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('features');
+    expect(Array.isArray(body.features)).toBeTruthy();
+    expect(body.features.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('sku');
+    expect(typeof body.sku).toBe('string');
+    expect(body).toHaveProperty('productName');
+    expect(typeof body.productName).toBe('string');
+    expect(body).toHaveProperty('emsVersion');
+    expect(typeof body.emsVersion).toBe('string');
+
+    // Cleanup
+    await licenseClientV3.deleteLicense(body.id);
   });
 
   test('POST Create License - should return 401 without valid token', async ({}) => {
@@ -423,6 +546,34 @@ test.describe('License API Tests (v3)', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('PUT Refresh License Token - should validate response schema', async ({ licenseClientV3, tidToken }) => {
+    // Get an existing license from the account to avoid race conditions
+    const accountResp = await licenseClientV3.getAccountLicense(TEST_ACCOUNT_ID);
+    const accountLicenses = await accountResp.json();
+    expect(accountLicenses.length).toBeGreaterThan(0);
+    const licenseId = accountLicenses[0].licenseId;
+
+    const response = await licenseClientV3.refreshLicenseToken(licenseId, tidToken);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('accountId');
+    expect(typeof body.accountId).toBe('string');
+    expect(body.accountId).toBe(TEST_ACCOUNT_ID);
+    expect(body.id || body.licenseId).toBe(licenseId);
+    expect(body).toHaveProperty('features');
+    expect(Array.isArray(body.features)).toBeTruthy();
+    expect(body).toHaveProperty('sku');
+    expect(typeof body.sku).toBe('string');
+    expect(body).toHaveProperty('productName');
+    expect(typeof body.productName).toBe('string');
+    expect(body).toHaveProperty('emsVersion');
+    expect(typeof body.emsVersion).toBe('string');
+  });
+
   test('PUT Refresh License Token - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
@@ -511,6 +662,47 @@ test.describe('License API Tests (v3)', () => {
       contentType: 'text/plain',
     });
     expect(renewResponse.status()).toBe(200);
+
+    // Cleanup
+    await licenseClientV3.deleteLicense(newLicenseId);
+  });
+
+  test('PUT Renew License - should validate response schema', async ({ licenseClientV3 }) => {
+    // Create a license first
+    const createResponse = await licenseClientV3.createLicense({
+      accountId: TEST_ACCOUNT_ID,
+      coreFeature: TEST_FEATURE,
+      deviceId: 'saathath-dev',
+      sku: 'BN-SB-ESTMEP-PRO',
+      licenseType: 1,
+      productName: 'Trimble Construction One Estimation MEP Pro - Named User Subscription',
+      productVersion: '2024.1.0',
+    });
+    const createBody = await createResponse.json();
+    const newLicenseId = createBody.licenseId || createBody.id;
+
+    const renewResponse = await licenseClientV3.renewLicense(newLicenseId);
+    expect(renewResponse.status()).toBe(200);
+    const body = await renewResponse.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: renewResponse.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('accountId');
+    expect(typeof body.accountId).toBe('string');
+    expect(body.accountId).toBe(TEST_ACCOUNT_ID);
+    expect(body.id || body.licenseId).toBe(newLicenseId);
+    expect(body).toHaveProperty('accountName');
+    expect(typeof body.accountName).toBe('string');
+    expect(body).toHaveProperty('features');
+    expect(Array.isArray(body.features)).toBeTruthy();
+    expect(body.features.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('sku');
+    expect(typeof body.sku).toBe('string');
+    expect(body).toHaveProperty('productName');
+    expect(typeof body.productName).toBe('string');
+    expect(body).toHaveProperty('emsVersion');
+    expect(typeof body.emsVersion).toBe('string');
 
     // Cleanup
     await licenseClientV3.deleteLicense(newLicenseId);

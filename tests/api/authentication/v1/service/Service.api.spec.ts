@@ -36,4 +36,24 @@ test.describe('Auth Service Health API Tests', () => {
     });
     expect(response.status()).toBe(200);
   });
+
+  test('GET Health - should validate response schema', async ({ authServiceClient }) => {
+    const response = await authServiceClient.getHealth();
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('environment');
+    expect(typeof body.environment).toBe('string');
+    expect(body).toHaveProperty('ping');
+    expect(typeof body.ping).toBe('string');
+    expect(body).toHaveProperty('serviceDescription');
+    expect(typeof body.serviceDescription).toBe('string');
+    expect(body).toHaveProperty('serviceName');
+    expect(typeof body.serviceName).toBe('string');
+    expect(body).toHaveProperty('version');
+    expect(typeof body.version).toBe('string');
+  });
 });

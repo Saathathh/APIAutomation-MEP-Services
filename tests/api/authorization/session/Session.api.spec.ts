@@ -34,17 +34,24 @@ test.describe('Session Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    // Schema: must have a token field containing a valid JWT
+    // Schema: must have accessToken, token, and expires
+    expect(body).toHaveProperty('accessToken');
+    expect(typeof body.accessToken).toBe('string');
+    expect(body.accessToken.length).toBeGreaterThan(0);
+
     expect(body).toHaveProperty('token');
     expect(typeof body.token).toBe('string');
     expect(body.token.length).toBeGreaterThan(0);
-    // Validate JWT format (header.payload.signature)
+    // Validate token is a valid JWT (header.payload.signature)
     const parts = body.token.split('.');
     expect(parts).toHaveLength(3);
-    // Validate payload is decodable JSON
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
     expect(typeof payload).toBe('object');
     expect(payload).not.toBeNull();
+
+    expect(body).toHaveProperty('expires');
+    expect(typeof body.expires).toBe('string');
+    expect(body.expires.length).toBeGreaterThan(0);
   });
 
   test('GET Session - should return 400 without valid token', async ({}) => {
@@ -112,17 +119,24 @@ test.describe('Session Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    // Schema: must have a token field containing a valid JWT
+    // Schema: must have accessToken, token, and expires
+    expect(body).toHaveProperty('accessToken');
+    expect(typeof body.accessToken).toBe('string');
+    expect(body.accessToken.length).toBeGreaterThan(0);
+
     expect(body).toHaveProperty('token');
     expect(typeof body.token).toBe('string');
     expect(body.token.length).toBeGreaterThan(0);
-    // Validate JWT format (header.payload.signature)
+    // Validate token is a valid JWT (header.payload.signature)
     const parts = body.token.split('.');
     expect(parts).toHaveLength(3);
-    // Validate payload is decodable JSON
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
     expect(typeof payload).toBe('object');
     expect(payload).not.toBeNull();
+
+    expect(body).toHaveProperty('expires');
+    expect(typeof body.expires).toBe('string');
+    expect(body.expires.length).toBeGreaterThan(0);
   });
 
   test('POST Refresh Session - should return 400 without valid token', async ({}) => {

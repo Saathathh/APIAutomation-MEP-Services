@@ -26,6 +26,34 @@ test.describe('Authentication Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('POST Customer - should validate response schema', async ({ authenticationClient }) => {
+    const response = await authenticationClient.postCustomer(CUSTOMER_ID);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('uuid');
+    expect(typeof body.uuid).toBe('string');
+    expect(body.uuid.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('expires');
+    expect(typeof body.expires).toBe('string');
+    expect(body).toHaveProperty('accessToken');
+    expect(typeof body.accessToken).toBe('string');
+    expect(body.accessToken.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('name');
+    expect(typeof body.name).toBe('string');
+    expect(body).toHaveProperty('email');
+    expect(typeof body.email).toBe('string');
+    expect(body).toHaveProperty('roles');
+    expect(Array.isArray(body.roles)).toBeTruthy();
+    expect(body.roles.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('jwt');
+    expect(typeof body.jwt).toBe('string');
+    expect(body.jwt.length).toBeGreaterThan(0);
+  });
+
   test('POST Customer - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
@@ -52,6 +80,19 @@ test.describe('Authentication Service API Tests', () => {
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
+  });
+
+  test('GET CustomPing - should validate response schema', async ({ authenticationClient }) => {
+    const response = await authenticationClient.customPing(PING_MESSAGE);
+    expect(response.status()).toBe(200);
+    const body = await response.text();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(typeof body).toBe('string');
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).toContain(PING_MESSAGE);
   });
 
   test('GET CustomPing - should return 401 without valid token', async ({}) => {

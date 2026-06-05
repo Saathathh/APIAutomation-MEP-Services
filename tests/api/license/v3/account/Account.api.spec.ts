@@ -22,6 +22,33 @@ test.describe('License Account API Tests (v3)', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('GET Account - should validate response schema', async ({ licenseAccountClientV3 }) => {
+    const response = await licenseAccountClientV3.getAccount(TEST_FEATURE, TEST_LICENSE_TYPE);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(Array.isArray(body)).toBeTruthy();
+    expect(body.length).toBeGreaterThan(0);
+    const item = body[0];
+    expect(item).toHaveProperty('id');
+    expect(typeof item.id).toBe('string');
+    expect(item).toHaveProperty('name');
+    expect(typeof item.name).toBe('string');
+    expect(item).toHaveProperty('licenseType');
+    expect(typeof item.licenseType).toBe('string');
+    expect(item).toHaveProperty('sku');
+    expect(typeof item.sku).toBe('string');
+    expect(item).toHaveProperty('productName');
+    expect(typeof item.productName).toBe('string');
+    expect(item).toHaveProperty('features');
+    expect(Array.isArray(item.features)).toBeTruthy();
+    expect(item.features.length).toBeGreaterThan(0);
+    expect(typeof item.features[0]).toBe('string');
+  });
+
   test('GET Account - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
@@ -71,6 +98,30 @@ test.describe('License Account API Tests (v3)', () => {
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
+  });
+
+  test('GET Feature - should validate response schema', async ({ licenseAccountClientV3 }) => {
+    const response = await licenseAccountClientV3.getFeature(TEST_ACCOUNT_ID, TEST_FEATURE, TEST_LICENSE_TYPE);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('accountId');
+    expect(typeof body.accountId).toBe('string');
+    expect(body.accountId).toBe(TEST_ACCOUNT_ID);
+    expect(body).toHaveProperty('featureId');
+    expect(typeof body.featureId).toBe('string');
+    expect(body.featureId).toBe(TEST_FEATURE);
+    expect(body).toHaveProperty('startDate');
+    expect(typeof body.startDate).toBe('string');
+    expect(body).toHaveProperty('endDate');
+    expect(typeof body.endDate).toBe('string');
+    expect(body).toHaveProperty('limit');
+    expect(typeof body.limit).toBe('number');
+    expect(body).toHaveProperty('limitUnit');
+    expect(typeof body.limitUnit).toBe('string');
   });
 
   test('GET Feature - should return 401 without valid token', async ({}) => {
@@ -141,6 +192,18 @@ test.describe('License Account API Tests (v3)', () => {
       contentType: 'text/plain',
     });
     expect(response.ok()).toBeTruthy();
+  });
+
+  test('POST Cache Reset - should validate response schema', async ({ licenseAccountClientV3 }) => {
+    const response = await licenseAccountClientV3.cacheReset([TEST_USER_ID]);
+    expect(response.ok()).toBeTruthy();
+    const body = await response.text();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    // Cache reset returns 200/204 with empty or minimal response
+    expect([200, 204]).toContain(response.status());
   });
 
   test('POST Cache Reset - should return 401 without valid token', async ({}) => {

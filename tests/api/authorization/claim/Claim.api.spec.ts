@@ -66,16 +66,24 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    // Schema: response must contain a JWT token
+    // Schema: response must contain accessToken, token, and expires
+    expect(body).toHaveProperty('accessToken');
+    expect(typeof body.accessToken).toBe('string');
+    expect(body.accessToken.length).toBeGreaterThan(0);
+
     expect(body).toHaveProperty('token');
     expect(typeof body.token).toBe('string');
-    // Validate JWT format (3 dot-separated base64 parts)
+    // Validate token is a valid JWT (3 dot-separated base64 parts)
     const parts = body.token.split('.');
     expect(parts).toHaveLength(3);
-    // Validate payload is decodable JSON
+    // Validate JWT payload is decodable JSON
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
     expect(typeof payload).toBe('object');
     expect(payload).not.toBeNull();
+
+    expect(body).toHaveProperty('expires');
+    expect(typeof body.expires).toBe('string');
+    expect(body.expires.length).toBeGreaterThan(0);
   });
 
   test('POST Add Claims - should return 401 without valid token', async ({}) => {
@@ -180,16 +188,22 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    // Schema: response must contain a JWT token
+    // Schema: response must contain accessToken, token, and expires
+    expect(body).toHaveProperty('accessToken');
+    expect(typeof body.accessToken).toBe('string');
+    expect(body.accessToken.length).toBeGreaterThan(0);
+
     expect(body).toHaveProperty('token');
     expect(typeof body.token).toBe('string');
-    // Validate JWT format (3 dot-separated base64 parts)
     const parts = body.token.split('.');
     expect(parts).toHaveLength(3);
-    // Validate payload is decodable JSON
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
     expect(typeof payload).toBe('object');
     expect(payload).not.toBeNull();
+
+    expect(body).toHaveProperty('expires');
+    expect(typeof body.expires).toBe('string');
+    expect(body.expires.length).toBeGreaterThan(0);
   });
 
   test('POST Remove Claims - should return 401 without valid token', async ({}) => {
@@ -265,11 +279,19 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    // Schema: response must contain a JWT token after claims deletion
+    // Schema: response must contain accessToken, token, and expires
+    expect(body).toHaveProperty('accessToken');
+    expect(typeof body.accessToken).toBe('string');
+    expect(body.accessToken.length).toBeGreaterThan(0);
+
     expect(body).toHaveProperty('token');
     expect(typeof body.token).toBe('string');
     const parts = body.token.split('.');
     expect(parts).toHaveLength(3);
+
+    expect(body).toHaveProperty('expires');
+    expect(typeof body.expires).toBe('string');
+    expect(body.expires.length).toBeGreaterThan(0);
   });
 
   test('DELETE All Claims - should return 401 without valid token', async ({}) => {

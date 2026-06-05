@@ -28,6 +28,7 @@ type ApiFixtures = {
   licenseAccountClientV3: LicenseAccountClient;
   licenseClientV4: LicenseClient;
   licenseClientV3: LicenseClient;
+  licenseClientV1: LicenseClient;
   licenseCustomerClient: LicenseCustomerClient;
 };
 
@@ -111,6 +112,11 @@ export const test = base.extend<ApiFixtures>({
 
   licenseClientV3: async ({ apiContext }, use) => {
     const client = new LicenseClient(apiContext, '3.0');
+    await use(client);
+  },
+
+  licenseClientV1: async ({ apiContext }, use) => {
+    const client = new LicenseClient(apiContext, '1.0');
     await use(client);
   },
 

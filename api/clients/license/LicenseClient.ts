@@ -70,4 +70,18 @@ export class LicenseClient {
       data: { licenseId },
     });
   }
+
+  /** GET /licenses/License/{customerId}/product/{sku}?api-version={version} — Request a license for user */
+  async requestLicense(customerId: string, sku: string): Promise<APIResponse> {
+    return this.request.get(`${this.basePath}/${encodeURIComponent(customerId)}/product/${encodeURIComponent(sku)}`, {
+      params: { 'api-version': this.apiVersion },
+    });
+  }
+
+  /** POST /licenses/License/{licenseId}?api-version={version} — Refresh an existing license */
+  async refreshLicense(licenseId: string): Promise<APIResponse> {
+    return this.request.post(`${this.basePath}/${encodeURIComponent(licenseId)}`, {
+      params: { 'api-version': this.apiVersion },
+    });
+  }
 }

@@ -26,4 +26,11 @@ export class LicenseCustomerClient {
       params: { 'api-version': this.apiVersion },
     });
   }
+
+  /** GET /licenses/Customer/{customerId}/products?api-version={version} */
+  async getCustomerProducts(customerId: string): Promise<APIResponse> {
+    return this.request.get(`/licenses/Customer/${encodeURIComponent(customerId)}/products`, {
+      params: { 'api-version': this.apiVersion },
+    });
+  }
 }

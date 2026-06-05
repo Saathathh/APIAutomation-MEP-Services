@@ -30,6 +30,28 @@ test.describe('Product Service API Tests', () => {
     expect(response.status()).toBe(200);
   });
 
+  test('PUT Register Product - should validate response schema', async ({ productClient }) => {
+    const response = await productClient.registerProduct(PRODUCT_PAYLOAD);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('id');
+    expect(typeof body.id).toBe('string');
+    expect(body.id.length).toBeGreaterThan(0);
+    expect(body).toHaveProperty('clientId');
+    expect(typeof body.clientId).toBe('string');
+    expect(body.clientId).toBe(PRODUCT_PAYLOAD.clientId);
+    expect(body).toHaveProperty('clientSecret');
+    expect(typeof body.clientSecret).toBe('string');
+    expect(body.clientSecret).toBe(PRODUCT_PAYLOAD.clientSecret);
+    expect(body).toHaveProperty('redirectUrl');
+    expect(typeof body.redirectUrl).toBe('string');
+    expect(body.redirectUrl).toBe(PRODUCT_PAYLOAD.redirectUrl);
+  });
+
   test('PUT Register Product - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
       baseURL: process.env.BASE_URL,

@@ -18,6 +18,22 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
     expect(Array.isArray(body)).toBeTruthy();
   });
 
+  test('GET ListAvailable - should validate response schema', async ({ featureFlagClientV2 }) => {
+    const response = await featureFlagClientV2.listAvailableFlags();
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(Array.isArray(body)).toBeTruthy();
+    expect(body.length).toBeGreaterThan(0);
+    for (const flag of body) {
+      expect(typeof flag).toBe('string');
+      expect(flag.length).toBeGreaterThan(0);
+    }
+  });
+
   test('GET ListAvailable - should return 401 without valid token', async ({}) => {
     const unauthorizedCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
@@ -84,6 +100,18 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
     });
     expect(response.status()).toBe(200);
     expect(body.trim().toLowerCase()).toBe('true');
+  });
+
+  test('GET IsAvailable - should validate response schema', async ({ featureFlagClientV2 }) => {
+    const response = await featureFlagClientV2.isFlagAvailable('FeatureTest1');
+    expect(response.status()).toBe(200);
+    const body = await response.text();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(typeof body).toBe('string');
+    expect(['true', 'false']).toContain(body.trim().toLowerCase());
   });
 
   test('GET IsAvailable - should return 401 without valid token', async ({}) => {
@@ -154,6 +182,22 @@ test.describe('Feature Flag Service API Tests (v2)', () => {
     });
     expect(response.status()).toBe(200);
     expect(Array.isArray(body)).toBeTruthy();
+  });
+
+  test('GET ListAvailable by category - should validate response schema', async ({ featureFlagClientV2 }) => {
+    const response = await featureFlagClientV2.listAvailableFlagsByCategory('QA');
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(Array.isArray(body)).toBeTruthy();
+    expect(body.length).toBeGreaterThan(0);
+    for (const flag of body) {
+      expect(typeof flag).toBe('string');
+      expect(flag.length).toBeGreaterThan(0);
+    }
   });
 
   test('GET ListAvailable by category - should return 401 without valid token', async ({}) => {
