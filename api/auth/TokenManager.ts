@@ -90,7 +90,7 @@ export async function getTidToken(): Promise<string> {
     }).toString();
 
   const browser = await chromium.launch({
-    headless: false,
+    headless: !!process.env.CI,
     channel: 'chrome',
   });
 
