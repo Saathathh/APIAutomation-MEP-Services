@@ -1,0 +1,371 @@
+================================================================================
+          AUTHENTICATION SERVICE - API TEST AUTOMATION GUIDE
+================================================================================
+
+Created: 2026-06-10
+Framework: Playwright (TypeScript)
+Location: c:\APIAutomation
+
+================================================================================
+1. SERVICE OVERVIEW
+================================================================================
+
+The Authentication Service provides a REST API for user authentication, product
+registration, and user management. It handles customer authentication (issuing
+JWTs), product client credential registration, and user CRUD operations.
+
+Authentication: OAuth2 Bearer Token (required for all endpoints except Health)
+Base URL: Configured via BASE_URL environment variable
+API Version: v1 (currently only version implemented)
+
+The service is composed of 4 controllers:
+  - Authentication Controller: Customer auth & custom ping
+  - Product Controller: Product registration & retrieval
+  - User Controller: User CRUD by UUID/email
+  - Service Controller: Health check (public)
+
+================================================================================
+2. ENDPOINTS (8 Total)
+================================================================================
+
++==============================================================================+
+| CONTROLLER: Authentication (/authentications/Authentication)                 |
++-----+-------+---------------------------------------------------+-----------+
+| #   | Method| Endpoint                                          | Purpose   |
++-----+-------+---------------------------------------------------+-----------+
+| 1   | POST  | /Authentication/customer/{customerId}             | Authenticate|
+|     |       |                                                   | customer &|
+|     |       |                                                   | get JWT   |
+| 2   | GET   | /Authentication/customPing/{message}              | Custom ping|
+|     |       |                                                   | (echo msg)|
++-----+-------+---------------------------------------------------+-----------+
+
++==============================================================================+
+| CONTROLLER: Product (/authentications/Product)                                |
++-----+-------+---------------------------------------------------+-----------+
+| #   | Method| Endpoint                                          | Purpose   |
++-----+-------+---------------------------------------------------+-----------+
+| 3   | PUT   | /Product                                          | Register a|
+|     |       |                                                   | product   |
+| 4   | GET   | /Product/{id}                                     | Get product|
+|     |       |                                                   | by ID     |
++-----+-------+---------------------------------------------------+-----------+
+
++==============================================================================+
+| CONTROLLER: User (/authentications/User)                                     |
++-----+-------+---------------------------------------------------+-----------+
+| #   | Method| Endpoint                                          | Purpose   |
++-----+-------+---------------------------------------------------+-----------+
+| 5   | GET   | /User/{uuid}                                      | Get user  |
+|     |       |                                                   | by UUID   |
+| 6   | GET   | /User/email/{email}                               | Get user  |
+|     |       |                                                   | by email  |
+| 7   | POST  | /User                                             | Create or |
+|     |       |                                                   | update user|
++-----+-------+---------------------------------------------------+-----------+
+
++==============================================================================+
+| CONTROLLER: Service (/authentications/Service)                                |
++-----+-------+---------------------------------------------------+-----------+
+| #   | Method| Endpoint                                          | Purpose   |
++-----+-------+---------------------------------------------------+-----------+
+| 8   | GET   | /Service/Health                                   | Health    |
+|     |       |                                                   | check     |
++-----+-------+---------------------------------------------------+-----------+
+
+================================================================================
+3. ENDPOINT DETAILS
+================================================================================
+
+--------------------------------------------------------------------------------
+ENDPOINT 1: POST /authentications/Authentication/customer/{customerId}
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: customerId (string - UUID)
+  - Response 200:
+    {
+      "uuid": "<string>",
+      "expires": "<ISO datetime>",
+      "accessToken": "<string>",
+      "name": "<string>",
+      "email": "<string>",
+      "roles": ["role1", "role2"],
+      "jwt": "<JWT string>"
+    }
+  - Error: 400/401 (invalid/missing token)
+
+--------------------------------------------------------------------------------
+ENDPOINT 2: GET /authentications/Authentication/customPing/{message}
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: message (string)
+  - Response 200: Plain text string containing the message (echo)
+  - Error: 400/401 (invalid/missing token)
+
+--------------------------------------------------------------------------------
+ENDPOINT 3: PUT /authentications/Product
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Request Body:
+    {
+      "id": "<string>",
+      "clientId": "<uuid>",
+      "clientSecret": "<string>",
+      "redirectUrl": "<url string>"
+    }
+  - Response 200: Same object echoed back with registered details
+  - Error: 400/401 (invalid/missing token)
+
+--------------------------------------------------------------------------------
+ENDPOINT 4: GET /authentications/Product/{id}
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: id (string - product ID)
+  - Response 200: Product object { id, clientId, clientSecret, redirectUrl }
+  - Error: 400/401 (invalid/missing token)
+
+--------------------------------------------------------------------------------
+ENDPOINT 5: GET /authentications/User/{uuid}
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: uuid (string - user UUID)
+  - Response 200: User object
+  - Error: 400/401 (invalid/missing token)
+
+--------------------------------------------------------------------------------
+ENDPOINT 6: GET /authentications/User/email/{email}
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: email (string - URL-encoded email address)
+  - Response 200:
+    {
+      "id": "<string>",
+      "email": "<string>",
+      "firstName": "<string>",
+      "lastName": "<string>",
+      "roles": ["role1", "role2"],
+      "adminRoles": [],
+      "create": "<ISO datetime>",
+      "modified": "<ISO datetime>"
+    }
+  - Error: 400/401 (invalid/missing token)
+
+--------------------------------------------------------------------------------
+ENDPOINT 7: POST /authentications/User
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Request Body:
+    {
+      "email": "<string>",
+      "firstName": "<string>",
+      "lastName": "<string>",
+      "roles": ["role1", "role2"],
+      "adminRoles": []
+    }
+  - Response 200: Created/updated user object (same schema as GET by email)
+  - Error: 400/401 (unauthorized), 403 (insufficient admin roles)
+
+--------------------------------------------------------------------------------
+ENDPOINT 8: GET /authentications/Service/Health
+--------------------------------------------------------------------------------
+  - Auth: None (public endpoint)
+  - Response 200:
+    {
+      "environment": "<string>",
+      "ping": "<string>",
+      "serviceDescription": "<string>",
+      "serviceName": "<string>",
+      "version": "<string>"
+    }
+
+================================================================================
+4. HOW IT WORKS (Architecture)
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                         TEST EXECUTION FLOW                             │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │  1. global-setup.ts runs first (env validation)                         │
+  │                                                                         │
+  │  2. ApiBaseTest.ts (test fixture) initializes:                          │
+  │     a) TokenManager.ts → fetches OAuth2 token                           │
+  │     b) Creates Playwright APIRequestContext with base URL + auth header │
+  │     c) Creates client instances:                                        │
+  │        - AuthenticationClient                                           │
+  │        - ProductClient                                                  │
+  │        - UserClient                                                     │
+  │        - AuthServiceClient                                              │
+  │                                                                         │
+  │  3. Tests grouped by controller:                                        │
+  │     - authentication/ → POST Customer + GET CustomPing                  │
+  │     - product/ → PUT Register + GET Product                             │
+  │     - user/ → GET by UUID, GET by Email, POST Create/Update             │
+  │     - service/ → GET Health (public, no auth needed)                    │
+  │                                                                         │
+  │  4. Product tests register before fetching (PUT → GET flow)             │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Key Files:
+  ─────────────────────────────────────────────────────────────────────────
+  api/auth/TokenManager.ts                  → Token generation & caching
+  api/clients/authentication/
+    AuthenticationClient.ts                 → Customer auth (2 methods)
+    ProductClient.ts                        → Product registration (2 methods)
+    UserClient.ts                           → User management (3 methods)
+    AuthServiceClient.ts                    → Health check (1 method)
+  utilities/ApiBaseTest.ts                  → Shared Playwright fixtures
+  tests/api/authentication/v1/
+    authentication/Authentication.api.spec.ts → Auth tests
+    product/Product.api.spec.ts               → Product tests
+    user/User.api.spec.ts                     → User tests
+    service/Service.api.spec.ts               → Health tests
+
+================================================================================
+5. TEST CASES COVERED
+================================================================================
+
+Total Test Cases: 19
+
+──────────────────────────────────────────────────────────────────────────────
+AUTHENTICATION (6 tests)
+tests/api/authentication/v1/authentication/Authentication.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  POST /Authentication/customer/{customerId} (3 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  1  | Should return 200 with valid payload               | Happy path
+  2  | Should validate response schema (uuid, expires,    | Schema validation
+     | accessToken, name, email, roles, jwt)              |
+  3  | Should return 401 without valid token              | Security/Auth
+
+  GET /Authentication/customPing/{message} (3 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  4  | Should return 200 with valid message               | Happy path
+  5  | Should validate response schema (echo message)     | Schema validation
+  6  | Should return 401 without valid token              | Security/Auth
+
+──────────────────────────────────────────────────────────────────────────────
+PRODUCT (5 tests)
+tests/api/authentication/v1/product/Product.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  PUT /Product — Register Product (3 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  7  | Should return 200 with valid payload               | Happy path
+  8  | Should validate response schema (id, clientId,     | Schema validation
+     | clientSecret, redirectUrl)                         |
+  9  | Should return 401 without valid token              | Security/Auth
+
+  GET /Product/{id} — Get Product (2 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  10 | Should return 200 for registered product           | Happy path
+  11 | Should return 401 without valid token              | Security/Auth
+
+──────────────────────────────────────────────────────────────────────────────
+USER (8 tests)
+tests/api/authentication/v1/user/User.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  GET /User/{uuid} (2 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  12 | Should return 200 for known UUID                   | Happy path
+  13 | Should return 401 without valid token              | Security/Auth
+
+  GET /User/email/{email} (3 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  14 | Should return 200 for known email                  | Happy path
+  15 | Should validate response schema (id, email,        | Schema validation
+     | firstName, lastName, roles, adminRoles, create,    |
+     | modified)                                          |
+  16 | Should return 401 without valid token              | Security/Auth
+
+  POST /User — Create/Update User (3 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  17 | Should return 200 with valid payload               | Happy path
+  18 | Should validate response schema                    | Schema validation
+  19 | Should return 401 without valid token              | Security/Auth
+
+──────────────────────────────────────────────────────────────────────────────
+SERVICE HEALTH (3 tests)
+tests/api/authentication/v1/service/Service.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  GET /Service/Health (3 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  20 | Should return 200 without token (public)           | Happy path
+  21 | Should return 200 with valid token                 | Happy path
+  22 | Should validate response schema (environment,      | Schema validation
+     | ping, serviceDescription, serviceName, version)   |
+
+================================================================================
+6. TEST COVERAGE SUMMARY
+================================================================================
+
+  Category                | Covered?  | Details
+  ────────────────────────+───────────+──────────────────────────────────────
+  Happy Path (200 OK)     | YES       | All 8 endpoints
+  Schema Validation       | YES       | Response object structure verified
+  Authentication (401)    | YES       | Invalid/missing token on all secured
+                          |           | endpoints
+  Public Endpoints        | YES       | Health accessible without auth
+  Product Registration    | YES       | PUT → GET lifecycle
+  User CRUD               | YES       | Create/Update + Retrieve by UUID/email
+  Customer JWT Issuance   | YES       | POST customer returns JWT + roles
+  Echo/Ping Verification  | YES       | Message reflected in response
+
+================================================================================
+7. PROJECT STRUCTURE (Relevant to Authentication)
+================================================================================
+
+  c:\APIAutomation\
+  ├── api/
+  │   ├── auth/
+  │   │   └── TokenManager.ts                 # OAuth2 token management
+  │   └── clients/
+  │       └── authentication/
+  │           ├── AuthenticationClient.ts      # Customer auth (2 methods)
+  │           ├── ProductClient.ts             # Product CRUD (2 methods)
+  │           ├── UserClient.ts                # User CRUD (3 methods)
+  │           └── AuthServiceClient.ts         # Health check (1 method)
+  ├── tests/
+  │   └── api/
+  │       └── authentication/
+  │           └── v1/
+  │               ├── authentication/
+  │               │   └── Authentication.api.spec.ts  # 6 tests
+  │               ├── product/
+  │               │   └── Product.api.spec.ts         # 5 tests
+  │               ├── user/
+  │               │   └── User.api.spec.ts            # 8 tests
+  │               └── service/
+  │                   └── Service.api.spec.ts         # 3 tests
+  └── utilities/
+      └── ApiBaseTest.ts                      # Shared fixtures
+
+================================================================================
+8. TROUBLESHOOTING
+================================================================================
+
+  Problem                            | Solution
+  ───────────────────────────────────+──────────────────────────────────────
+  400/401 on all auth calls          | Check .env token credentials
+  403 on POST /User                  | User lacks admin roles (xs-admin-user)
+  POST Customer returns invalid JWT  | Verify customerId UUID is correct
+  GET Product returns 404            | Product not registered yet (PUT first)
+  Health check fails                 | Verify BASE_URL is reachable
+
+  NOTE: For prerequisites and general setup, refer to README.md
+
+================================================================================
+END OF DOCUMENT
+================================================================================

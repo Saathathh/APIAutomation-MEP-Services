@@ -1,0 +1,472 @@
+================================================================================
+          AUTHORIZATION SERVICE - API TEST AUTOMATION GUIDE
+================================================================================
+
+Created: 2026-06-09
+Framework: Playwright (TypeScript)
+Location: c:\APIAutomation
+
+================================================================================
+1. SERVICE OVERVIEW
+================================================================================
+
+The Authorization Service provides a REST API for managing user sessions, roles,
+and claims. It also exposes well-known discovery endpoints (JWKS, OpenID Config)
+and a health check endpoint.
+
+Authentication: OAuth2 Bearer Token (required for Session, Role, and Claim APIs)
+                Well-Known and Health endpoints are public (no auth required)
+Base URL: Configured via BASE_URL environment variable
+API Version: 1.0 (passed as query parameter: ?api-version=1.0)
+
+================================================================================
+2. ENDPOINTS (12 Total)
+================================================================================
+
+The Authorization Service exposes 12 endpoints across 5 controllers:
+
++==============================================================================+
+| CONTROLLER: Session (/authorizations/Session)                                |
++-----+-------+---------------------------------------------+-----------------+
+| #   | Method| Endpoint                                    | Purpose         |
++-----+-------+---------------------------------------------+-----------------+
+| 1   | GET   | /Session?api-version=1.0                    | Get current     |
+|     |       |                                             | session         |
+| 2   | POST  | /Session?api-version=1.0                    | Refresh session |
+|     |       |                                             | (set expiry)    |
+| 3   | DELETE| /Session/{tidToken}?api-version=1.0         | Delete session  |
++-----+-------+---------------------------------------------+-----------------+
+
++==============================================================================+
+| CONTROLLER: Role (/authorizations/Role)                                      |
++-----+-------+---------------------------------------------+-----------------+
+| #   | Method| Endpoint                                    | Purpose         |
++-----+-------+---------------------------------------------+-----------------+
+| 4   | GET   | /Role?api-version=1.0                       | Get all roles   |
+| 5   | GET   | /Role/{uuid}?api-version=1.0                | Get roles for   |
+|     |       |                                             | specific user   |
+| 6   | POST  | /Role/{uuid}?api-version=1.0                | Create/assign   |
+|     |       |                                             | roles to user   |
+| 7   | POST  | /Role/{uuid}/delete?api-version=1.0         | Delete roles    |
+|     |       |                                             | from user       |
++-----+-------+---------------------------------------------+-----------------+
+
++==============================================================================+
+| CONTROLLER: Claim (/authorizations/Claim)                                    |
++-----+-------+---------------------------------------------+-----------------+
+| #   | Method| Endpoint                                    | Purpose         |
++-----+-------+---------------------------------------------+-----------------+
+| 8   | POST  | /Claim/add/{uuid}?api-version=1.0           | Add claims to   |
+|     |       |                                             | user            |
+| 9   | POST  | /Claim/remove/{uuid}?api-version=1.0        | Remove specific |
+|     |       |                                             | claims          |
+| 10  | DELETE| /Claim/{uuid}?api-version=1.0               | Delete all      |
+|     |       |                                             | claims for user |
++-----+-------+---------------------------------------------+-----------------+
+
++==============================================================================+
+| CONTROLLER: Well-Known (/authorizations/.well-known)                         |
++-----+-------+---------------------------------------------+-----------------+
+| #   | Method| Endpoint                                    | Purpose         |
++-----+-------+---------------------------------------------+-----------------+
+| 11  | GET   | /.well-known/jwks?api-version=1.0           | Get JSON Web    |
+|     |       |                                             | Key Set (JWKS)  |
+| 12  | GET   | /.well-known/openid-configuration           | Get OpenID      |
+|     |       | ?api-version=1.0                            | Connect config  |
++-----+-------+---------------------------------------------+-----------------+
+
++==============================================================================+
+| CONTROLLER: Service (/authorizations/Service)                                |
++-----+-------+---------------------------------------------+-----------------+
+| #   | Method| Endpoint                                    | Purpose         |
++-----+-------+---------------------------------------------+-----------------+
+| 13  | GET   | /Service/Health?api-version=1.0             | Health check    |
++-----+-------+---------------------------------------------+-----------------+
+
+================================================================================
+3. ENDPOINT DETAILS
+================================================================================
+
+--------------------------------------------------------------------------------
+ENDPOINT 1: GET /authorizations/Session?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Response 200:
+    {
+      "accessToken": "<string>",
+      "token": "<JWT string (header.payload.signature)>",
+      "expires": "<ISO datetime string>"
+    }
+  - Error: 400 (invalid/missing token)
+
+--------------------------------------------------------------------------------
+ENDPOINT 2: POST /authorizations/Session?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Request Body:
+    { "expires": <number_in_seconds>, "token": "<tid_token_string>" }
+  - Response 200: Same schema as GET Session
+  - Error: 400 (invalid token), 500 (zero/negative expiry)
+
+--------------------------------------------------------------------------------
+ENDPOINT 3: DELETE /authorizations/Session/{tidToken}?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: tidToken (string)
+  - Response: 200 OK
+  - Error: 400/401 (unauthorized)
+
+--------------------------------------------------------------------------------
+ENDPOINT 4: GET /authorizations/Role?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Response 200: Object with UUID keys → arrays of role name strings
+    { "uuid1": ["RoleA", "RoleB"], "uuid2": ["RoleC"] }
+  - Error: 400/401 (unauthorized)
+
+--------------------------------------------------------------------------------
+ENDPOINT 5: GET /authorizations/Role/{uuid}?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: uuid (user identifier)
+  - Response 200: Array of role name strings ["RoleA", "RoleB"]
+  - Error: 400/401 (unauthorized), 404 (uuid not found)
+
+--------------------------------------------------------------------------------
+ENDPOINT 6: POST /authorizations/Role/{uuid}?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: uuid (user identifier)
+  - Request Body: Array of role name strings ["roleName1", "roleName2"]
+  - Response 200: Array of assigned role names
+  - Error: 400/401, 405 (missing UUID in path)
+
+--------------------------------------------------------------------------------
+ENDPOINT 7: POST /authorizations/Role/{uuid}/delete?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: uuid (user identifier)
+  - Request Body: Array of role names to delete ["roleName1"]
+  - Response 200: Empty body or empty array
+  - Error: 400/401
+
+--------------------------------------------------------------------------------
+ENDPOINT 8: POST /authorizations/Claim/add/{uuid}?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: uuid (user identifier)
+  - Request Body: Array of claim objects
+    [{ "type": "ClaimType", "value": "ClaimValue", "signature": "<RSA sig>" }]
+  - Response 200: Session object { accessToken, token (JWT), expires }
+  - Error: 400/401
+
+--------------------------------------------------------------------------------
+ENDPOINT 9: POST /authorizations/Claim/remove/{uuid}?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: uuid (user identifier)
+  - Request Body: Array of claim objects (same as add)
+  - Response 200: Session object { accessToken, token (JWT), expires }
+  - Error: 400/401
+
+--------------------------------------------------------------------------------
+ENDPOINT 10: DELETE /authorizations/Claim/{uuid}?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: Bearer Token (required)
+  - Path Parameter: uuid (user identifier)
+  - Response 200: Session object { accessToken, token (JWT), expires }
+  - Error: 400/401
+
+--------------------------------------------------------------------------------
+ENDPOINT 11: GET /authorizations/.well-known/jwks?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: None (public)
+  - Response 200:
+    { "keys": [{ "kty": "RSA", "kid": "...", "n": "...", "e": "..." }] }
+
+--------------------------------------------------------------------------------
+ENDPOINT 12: GET /authorizations/.well-known/openid-configuration?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: None (public)
+  - Response 200:
+    { "issuer": "<url>", "jwks_uri": "<url>", ... }
+
+--------------------------------------------------------------------------------
+ENDPOINT 13: GET /authorizations/Service/Health?api-version=1.0
+--------------------------------------------------------------------------------
+  - Auth: None (public)
+  - Response 200:
+    { "environment": "...", "ping": "...", "serviceName": "...", "version": "..." }
+
+================================================================================
+4. HOW IT WORKS (Architecture)
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                         TEST EXECUTION FLOW                             │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │  1. global-setup.ts runs first (env validation)                         │
+  │                                                                         │
+  │  2. ApiBaseTest.ts (test fixture) initializes:                          │
+  │     a) TokenManager.ts → fetches OAuth2 token                           │
+  │     b) Creates Playwright APIRequestContext with base URL + auth header │
+  │     c) Creates client instances: SessionClient, RoleClient, ClaimClient │
+  │                                                                         │
+  │  3. Session tests: GET/POST/DELETE session operations                    │
+  │     - Role/Claim tests call getSession() in beforeEach to ensure        │
+  │       an active session exists before testing                            │
+  │                                                                         │
+  │  4. Role tests: CRUD lifecycle (get all → get specific → create →       │
+  │     delete → verify)                                                    │
+  │                                                                         │
+  │  5. Claim tests: Add → verify in JWT → remove → verify → delete all    │
+  │     - Claims are embedded in the session JWT token                      │
+  │     - Tests decode the JWT payload to verify claim presence/absence     │
+  │                                                                         │
+  │  6. Well-Known & Health: Public endpoints, no auth needed               │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  IMPORTANT: Authorization tests run SERIALLY (workers: 1) because session,
+  role, and claim operations are stateful and depend on execution order.
+  This is configured in playwright.config.ts:
+    { name: 'authorization', fullyParallel: false, workers: 1 }
+
+  Key Files:
+  ─────────────────────────────────────────────────────────────────────────
+  api/auth/TokenManager.ts                  → Token generation & caching
+  api/clients/authorization/
+    SessionClient.ts                        → Session endpoints (3 methods)
+    RoleClient.ts                           → Role endpoints (4 methods)
+    ClaimClient.ts                          → Claim endpoints (3 methods)
+    ServiceClient.ts                        → Health endpoint (1 method)
+  utilities/ApiBaseTest.ts                  → Shared Playwright fixtures
+  tests/api/authorization/
+    session/Session.api.spec.ts             → Session tests
+    role/Role.api.spec.ts                   → Role tests
+    claim/Claim.api.spec.ts                 → Claim tests
+    service/Service.api.spec.ts             → Health tests
+    well-known/WellKnown.api.spec.ts        → JWKS & OpenID Config tests
+
+================================================================================
+5. TEST CASES COVERED
+================================================================================
+
+Total Test Cases: 57
+
+──────────────────────────────────────────────────────────────────────────────
+SESSION (12 tests) - tests/api/authorization/session/Session.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  GET /Session (5 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  1  | Should return 200 with session data                | Happy path
+  2  | Should validate response schema (accessToken,      | Schema validation
+     | token as JWT, expires)                             |
+  3  | Should return 400 without valid token              | Security/Auth
+  4  | Should return error with no authorization header   | Security/Auth
+  5  | Should return error with expired token             | Security/Auth
+
+  POST /Session - Refresh (7 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  6  | Should return 200 with valid token                 | Happy path
+  7  | Should validate response schema                    | Schema validation
+  8  | Should return 400 without valid token              | Security/Auth
+  9  | Should return 500 for zero expiry value            | Negative/Edge
+  10 | Should return 500 for negative expiry value        | Negative/Edge
+  11 | Should handle very large expiry value              | Negative/Edge
+  12 | Should handle empty token string                   | Negative/Edge
+
+──────────────────────────────────────────────────────────────────────────────
+ROLE (23 tests) - tests/api/authorization/role/Role.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  GET /Role - All Roles (4 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  1  | Should return 200 with list of roles               | Happy path
+  2  | Should validate response schema (object of arrays) | Schema validation
+  3  | Should return 401 without valid token              | Security/Auth
+  4  | Should return 401 with no authorization header     | Security/Auth
+
+  GET /Role/{uuid} - Specific Role (4 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  5  | Should return 200 for known UUID                   | Happy path
+  6  | Should validate response schema (array of strings) | Schema validation
+  7  | Should return 401 without valid token              | Security/Auth
+  8  | Should return 404 with non-existent UUID           | Negative/Edge
+
+  POST /Role/{uuid} - Create Role (7 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  9  | Should return 200 with valid payload               | Happy path
+  10 | Should validate response schema                    | Schema validation
+  11 | Should return 401 without valid token              | Security/Auth
+  12 | Should return 405 without UUID in path             | Negative/Edge
+  13 | Should handle empty role names array               | Negative/Edge
+  14 | Should handle non-existent UUID                    | Negative/Edge
+  15 | Should handle invalid UUID format                  | Negative/Edge
+  16 | Should handle duplicate role creation              | Negative/Edge
+
+  POST /Role/{uuid}/delete - Delete Role (5 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  17 | Should return 200 for known UUID                   | Happy path
+  18 | Should validate response schema                    | Schema validation
+  19 | Should return 401 without valid token              | Security/Auth
+  20 | Should handle non-existent role name               | Negative/Edge
+  21 | Should handle non-existent UUID                    | Negative/Edge
+  22 | Should handle empty role names array               | Negative/Edge
+
+  E2E Flow - Role Lifecycle (5 tests, serial):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  23 | Step 1: GET All Roles (before create)              | E2E
+  24 | Step 2: POST Create Role (test123)                 | E2E
+  25 | Step 3: GET Specific Role (verify exists)          | E2E
+  26 | Step 4: POST Delete Role (test123)                 | E2E
+  27 | Step 5: GET Specific Role (verify removed)         | E2E
+
+──────────────────────────────────────────────────────────────────────────────
+CLAIM (18 tests) - tests/api/authorization/claim/Claim.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  POST /Claim/add/{uuid} - Add Claims (7 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  1  | Should return 200 with valid payload               | Happy path
+  2  | Should validate response schema (session object)   | Schema validation
+  3  | Should return 401 without valid token              | Security/Auth
+  4  | Should handle empty claims array                   | Negative/Edge
+  5  | Should handle invalid UUID format                  | Negative/Edge
+  6  | Should handle non-existent UUID                    | Negative/Edge
+  7  | Should handle claim with invalid signature         | Negative/Edge
+  8  | Should handle claim with empty type                | Negative/Edge
+
+  POST /Claim/remove/{uuid} - Remove Claims (5 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  9  | Should return 200 with valid payload               | Happy path
+  10 | Should validate response schema                    | Schema validation
+  11 | Should return 401 without valid token              | Security/Auth
+  12 | Should handle empty claims array                   | Negative/Edge
+  13 | Should handle non-existent UUID                    | Negative/Edge
+  14 | Should handle removing claims that do not exist    | Negative/Edge
+
+  DELETE /Claim/{uuid} - Delete All Claims (6 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  15 | Should return 200                                  | Happy path
+  16 | Should validate response schema                    | Schema validation
+  17 | Should return 401 without valid token              | Security/Auth
+  18 | Should handle non-existent UUID                    | Negative/Edge
+  19 | Should handle invalid UUID format                  | Negative/Edge
+  20 | Should be idempotent (delete when no claims exist) | Negative/Edge
+
+  E2E Flow - Claim Lifecycle (3 tests, serial):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  21 | Step 1: Add claims, verify in JWT token            | E2E
+  22 | Step 2: Remove claims, verify gone from JWT        | E2E
+  23 | Step 3: Delete all claims, verify JWT clean        | E2E
+
+──────────────────────────────────────────────────────────────────────────────
+WELL-KNOWN (4 tests) - tests/api/authorization/well-known/WellKnown.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  GET /.well-known/jwks (2 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  1  | Should return 200 with keys array                  | Happy path
+  2  | Should validate response schema (JWK fields)       | Schema validation
+
+  GET /.well-known/openid-configuration (2 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  3  | Should return 200 with expected fields             | Happy path
+  4  | Should validate response schema (issuer, jwks_uri) | Schema validation
+
+──────────────────────────────────────────────────────────────────────────────
+SERVICE HEALTH (2 tests) - tests/api/authorization/service/Service.api.spec.ts
+──────────────────────────────────────────────────────────────────────────────
+
+  GET /Service/Health (2 tests):
+  #  | Test Case                                          | Type
+  ---+----------------------------------------------------+-------------------
+  1  | Should return 200                                  | Happy path
+  2  | Should validate response schema (environment,      | Schema validation
+     | ping, serviceName, version)                        |
+
+================================================================================
+6. TEST COVERAGE SUMMARY
+================================================================================
+
+  Category                | Covered?  | Details
+  ────────────────────────+───────────+──────────────────────────────────────
+  Happy Path (200 OK)     | YES       | All 12 endpoints
+  Schema Validation       | YES       | Response types & JWT structure
+  Authentication (400/401)| YES       | Invalid, expired, missing tokens
+  Edge Cases              | YES       | Empty arrays, invalid UUIDs, zero/
+                          |           | negative values, special characters
+  Non-existent Resources  | YES       | Unknown UUIDs → 404
+  End-to-End Flows        | YES       | Full lifecycle for Roles and Claims
+  JWT Token Verification  | YES       | Claims embedded/removed from JWT
+  Idempotency             | YES       | Delete claims when none exist
+  Duplicate Prevention    | YES       | Duplicate role creation handling
+  Public Endpoints        | YES       | Well-Known & Health (no auth needed)
+
+================================================================================
+7. PROJECT STRUCTURE (Relevant to Authorization)
+================================================================================
+
+  c:\APIAutomation\
+  ├── api/
+  │   ├── auth/
+  │   │   └── TokenManager.ts                 # OAuth2 token management
+  │   └── clients/
+  │       └── authorization/
+  │           ├── SessionClient.ts            # Session API (3 methods)
+  │           ├── RoleClient.ts               # Role API (4 methods)
+  │           ├── ClaimClient.ts              # Claim API (3 methods)
+  │           └── ServiceClient.ts            # Health API (1 method)
+  ├── tests/
+  │   └── api/
+  │       └── authorization/
+  │           ├── session/
+  │           │   └── Session.api.spec.ts     # 12 tests
+  │           ├── role/
+  │           │   └── Role.api.spec.ts        # 23 tests (incl. 5 E2E serial)
+  │           ├── claim/
+  │           │   └── Claim.api.spec.ts       # 18 tests (incl. 3 E2E serial)
+  │           ├── service/
+  │           │   └── Service.api.spec.ts     # 2 tests
+  │           └── well-known/
+  │               └── WellKnown.api.spec.ts   # 4 tests
+  └── utilities/
+      └── ApiBaseTest.ts                      # Shared fixtures
+
+================================================================================
+8. TROUBLESHOOTING
+================================================================================
+
+  Problem                            | Solution
+  ───────────────────────────────────+──────────────────────────────────────
+  400 on Session calls               | Token may be invalid; check .env creds
+  401 on Role/Claim calls            | Ensure session is active first (GET
+                                     | /Session returns 200 before Role/Claim)
+  404 on GET Role/{uuid}             | UUID doesn't exist; use a valid UUID
+  500 on POST Session refresh        | Expiry must be > 0 (positive integer)
+  E2E tests fail in parallel         | Must run with --project=authorization
+                                     | (enforces serial execution)
+  Claim signature validation fails   | Signature must be RSA-signed; check
+                                     | the signing key matches the service key
+
+  NOTE: For prerequisites and general setup, refer to README.md
+
+================================================================================
+END OF DOCUMENT
+================================================================================

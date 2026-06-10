@@ -1,0 +1,218 @@
+================================================================================
+          FEATURE FLAG SERVICE - API TEST AUTOMATION GUIDE
+================================================================================
+
+Created: 2026-06-09
+Framework: Playwright (TypeScript)
+Location: c:\APIAutomation
+
+================================================================================
+1. SERVICE OVERVIEW
+================================================================================
+
+The Feature Flag Service provides a REST API to manage and query feature flags.
+Feature flags allow enabling/disabling features dynamically without code
+deployments. The service supports versioned APIs (v2 and v3).
+
+Authentication: OAuth2 Bearer Token (Client Credentials flow via Okta/TID)
+Base URL: Configured via BASE_URL environment variable
+
+================================================================================
+2. ENDPOINTS (3 Total)
+================================================================================
+
+The Feature Flag Service exposes 3 GET endpoints per version (v2 and v3):
+
++-----+--------------------------------------------------+---------------------------+
+| #   | Endpoint                                         | Purpose                   |
++-----+--------------------------------------------------+---------------------------+
+| 1   | GET /featureflags/{version}/Flags/ListAvailable  | List all available flags  |
+| 2   | GET /featureflags/{version}/Flags/IsAvailable/   | Check if a specific flag  |
+|     |     {flagName}                                   | is available (true/false) |
+| 3   | GET /featureflags/{version}/Flags/ListAvailable/ | List available flags      |
+|     |     {category}                                   | filtered by category      |
++-----+--------------------------------------------------+---------------------------+
+
+Where {version} = v2 or v3
+
+--------------------------------------------------------------------------------
+Endpoint 1: GET /featureflags/{version}/Flags/ListAvailable
+--------------------------------------------------------------------------------
+  - Method: GET
+  - Auth: Bearer Token (required)
+  - Response: 200 OK - JSON array of flag name strings
+    Example: ["FeatureTest1", "FeatureTest2", "DarkMode"]
+  - Error: 401 Unauthorized (missing/invalid/expired token)
+
+--------------------------------------------------------------------------------
+Endpoint 2: GET /featureflags/{version}/Flags/IsAvailable/{flagName}
+--------------------------------------------------------------------------------
+  - Method: GET
+  - Auth: Bearer Token (required)
+  - Path Parameter: flagName (string) - the name of the flag to check
+  - Response: 200 OK - plain text "true" or "false"
+  - Error: 401 Unauthorized, 404 Not Found (non-existent flag)
+
+--------------------------------------------------------------------------------
+Endpoint 3: GET /featureflags/{version}/Flags/ListAvailable/{category}
+--------------------------------------------------------------------------------
+  - Method: GET
+  - Auth: Bearer Token (required)
+  - Path Parameter: category (string) - category to filter flags by (e.g., "QA")
+  - Response: 200 OK - JSON array of flag name strings for that category
+  - Error: 401 Unauthorized, 404 Not Found (non-existent category)
+
+================================================================================
+3. HOW IT WORKS (Architecture)
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                         TEST EXECUTION FLOW                             │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │  1. global-setup.ts runs first (pre-test setup, e.g., env validation)   │
+  │                                                                         │
+  │  2. ApiBaseTest.ts (test fixture) initializes:                          │
+  │     a) TokenManager.ts → fetches OAuth2 token (client_credentials)      │
+  │     b) Creates Playwright APIRequestContext with base URL + auth header │
+  │     c) Creates FeatureFlagClient (v2 and v3) instances                  │
+  │                                                                         │
+  │  3. Test spec files use fixtures to call API endpoints                  │
+  │     - featureFlagClientV2 → calls v2 endpoints                          │
+  │     - featureFlagClientV3 → calls v3 endpoints                          │
+  │                                                                         │
+  │  4. Assertions validate status codes, response schemas, error handling  │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Key Files:
+  ─────────────────────────────────────────────────────────────────────────
+  api/auth/TokenManager.ts           → Token generation & caching (Okta TOTP)
+  api/clients/featureflag/           → FeatureFlagClient class (API wrapper)
+    FeatureFlagClient.ts
+  utilities/ApiBaseTest.ts           → Playwright fixtures (shared setup)
+  tests/api/featureflag/v2/          → v2 test cases
+    FeatureFlag.api.spec.ts
+  tests/api/featureflag/v3/          → v3 test cases
+    FeatureFlag.api.spec.ts
+
+================================================================================
+4. TEST CASES COVERED
+================================================================================
+
+Total Test Cases: 38 (19 per version × 2 versions)
+
+Per version (v2 and v3), the following 19 test cases are covered:
+
+ENDPOINT 1: GET /Flags/ListAvailable (6 tests)
+──────────────────────────────────────────────────────────────────────────────
+  #  | Test Case                                         | Type
+ ----+---------------------------------------------------+-------------------
+  1  | Should return 200 with list of flags              | Happy path
+  2  | Should validate response schema (array of strings)| Schema validation
+  3  | Should return 401 without valid token             | Security/Auth
+  4  | Response should contain flag name strings         | Data validation
+  5  | Should return 401 with expired token              | Security/Auth
+  6  | Should return 401 with no authorization header    | Security/Auth
+
+ENDPOINT 2: GET /Flags/IsAvailable/{flagName} (7 tests)
+──────────────────────────────────────────────────────────────────────────────
+  #  | Test Case                                         | Type
+ ----+---------------------------------------------------+-------------------
+  7  | Should return 200 with true for a known flag      | Happy path
+  8  | Should validate response schema (true/false)      | Schema validation
+  9  | Should return 401 without valid token             | Security/Auth
+  10 | Should handle non-existent flag name              | Negative/Edge
+  11 | Should handle empty flag name                     | Negative/Edge
+  12 | Should handle special characters in flag name     | Negative/Edge
+  13 | Should handle very long flag name (500 chars)     | Negative/Edge
+
+ENDPOINT 3: GET /Flags/ListAvailable/{category} (5 tests)
+──────────────────────────────────────────────────────────────────────────────
+  #  | Test Case                                         | Type
+ ----+---------------------------------------------------+-------------------
+  14 | Should return 200 for valid category              | Happy path
+  15 | Should validate response schema                   | Schema validation
+  16 | Should return 401 without valid token             | Security/Auth
+  17 | Should handle non-existent category               | Negative/Edge
+  18 | Should handle empty category                      | Negative/Edge
+  19 | Should handle special characters in category      | Negative/Edge
+  20 | Should handle case sensitivity                    | Negative/Edge
+
+E2E FLOW (1 test)
+──────────────────────────────────────────────────────────────────────────────
+  21 | Full flow: list all → check specific → list by category | Integration
+
+NOTE: Tests 14-20 = 7 tests, so total per version = 6 + 7 + 7 + 1 = 21 tests
+      Grand Total: 21 × 2 versions = 42 test cases
+
+================================================================================
+5. TEST COVERAGE SUMMARY
+================================================================================
+
+  Category                | Covered?  | Details
+  ────────────────────────+───────────+──────────────────────────────────
+  Happy Path (200 OK)     | YES       | All 3 endpoints per version
+  Schema Validation       | YES       | Response type/format verified
+  Authentication (401)    | YES       | Invalid, expired, missing token
+  Edge Cases              | YES       | Empty, special chars, long names
+  Non-existent Resources  | YES       | Unknown flags/categories
+  End-to-End Flow         | YES       | Full user journey across endpoints
+  Case Sensitivity        | YES       | Lowercase category test
+  URI Length Limits (414) | YES       | 500-char flag name
+
+================================================================================
+6. PROJECT STRUCTURE (Relevant to Feature Flags)
+================================================================================
+
+  c:\APIAutomation\
+  ├── .env                                    # Environment variables (not in Git)
+  ├── package.json                            # Dependencies & scripts
+  ├── playwright.config.ts                    # Test runner configuration
+  ├── global-setup.ts                         # Pre-test global setup
+  ├── api/
+  │   ├── auth/
+  │   │   └── TokenManager.ts                 # OAuth2 token management
+  │   └── clients/
+  │       └── featureflag/
+  │           └── FeatureFlagClient.ts        # API client (3 methods)
+  ├── tests/
+  │   └── api/
+  │       └── featureflag/
+  │           ├── v2/
+  │           │   └── FeatureFlag.api.spec.ts # v2 test cases (21 tests)
+  │           └── v3/
+  │               └── FeatureFlag.api.spec.ts # v3 test cases (21 tests)
+  └── utilities/
+      └── ApiBaseTest.ts                      # Shared test fixtures
+
+================================================================================
+7. HOW TO RUN FEATURE FLAG TESTS
+================================================================================
+
+  # Run ALL feature flag tests (v2 and v3)
+  npx playwright test tests/api/featureflag/
+
+  # Run only feature flag v2 tests
+  npx playwright test tests/api/featureflag/v2/FeatureFlag.api.spec.ts
+
+  # Run only feature flag v3 tests
+  npx playwright test tests/api/featureflag/v3/FeatureFlag.api.spec.ts
+
+  # View HTML report after test run
+  npx playwright show-report
+
+================================================================================
+8. TROUBLESHOOTING
+================================================================================
+  Problem                          | Solution
+  ─────────────────────────────────+────────────────────────────────────────
+  401 on all tests                 | Check .env token credentials are correct
+  Connection timeout               | Verify BASE_URL is reachable from machine
+  "Cannot find module" error       | Run: npm install
+  Tests hang                       | Check globalTimeout in playwright.config.ts
+  Token fetch fails                | Verify FF_AUTH_URL and credentials in .env
+
+================================================================================
+END OF DOCUMENT
+================================================================================
