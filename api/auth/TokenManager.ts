@@ -74,7 +74,12 @@ function generateTotp(): string {
 }
 
 export async function getTidToken(): Promise<string> {
-  // Return cached token if still valid
+  // Return token from env (set by global-setup.ts, shared with workers)
+  if (process.env.CACHED_TOKEN) {
+    return process.env.CACHED_TOKEN;
+  }
+
+  // Return cached token from file if still valid
   const cached = readCachedToken();
   if (cached) return cached;
 
@@ -130,6 +135,14 @@ export async function getTidToken(): Promise<string> {
     await oktaUsernameInput.waitFor({ timeout: 60000 });
     await oktaUsernameInput.fill(process.env.USERNAME!);
 
+    // Okta may have a "Next" button between username and password (two-step flow)
+    const oktaNextBtn = page.locator('button[type="submit"], input[type="submit"]').first();
+    const passwordAlreadyVisible = await page.locator('input[type="password"]:visible').first().isVisible().catch(() => false);
+    if (!passwordAlreadyVisible) {
+      await oktaNextBtn.click();
+      await page.waitForTimeout(2000);
+    }
+
     // Enter password
     const passwordInput = page.locator('input[type="password"]:visible').first();
     await passwordInput.waitFor({ timeout: 60000 });
@@ -182,6 +195,15 @@ export async function getTidToken(): Promise<string> {
     cacheToken(accessToken, expiresIn);
     return accessToken;
   } catch (error) {
+    // Capture screenshot for CI debugging
+    if (process.env.CI) {
+      try {
+        const pages = browser.contexts()[0]?.pages();
+        if (pages && pages.length > 0) {
+          await pages[0].screenshot({ path: 'test-results/auth-failure.png', fullPage: true });
+        }
+      } catch { /* ignore screenshot errors */ }
+    }
     await browser.close().catch(() => {});
     throw error;
   }

@@ -1,17 +1,10 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { tryParseJson } from '../../../../../utilities/testHelpers';
+import { LICENSE_TEST_DATA } from '../../../../../utilities/testData';
 
-const TEST_CUSTOMER_ID = '0cde2a2d-d33a-4b22-9e93-4e760c2b31db';
-const TEST_SKU = 'CORE-SERVICES';
-
-/** Helper to parse JSON safely */
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+const TEST_CUSTOMER_ID = LICENSE_TEST_DATA.customerIdV1;
+const TEST_SKU = LICENSE_TEST_DATA.skuV1;
 
 test.describe('License API Tests (v1)', () => {
 
@@ -306,10 +299,10 @@ test.describe('License API Tests (v1)', () => {
   // E2E Flow: Request → Check → Refresh → Release
   // ======================================================================
 
-  test.describe.serial('E2E - License lifecycle', () => {
+  test('E2E - License lifecycle (Request → Check → Refresh → Release)', async ({ licenseClientV1 }) => {
     let licenseId: string;
 
-    test('Step 1: Request a license', async ({ licenseClientV1 }) => {
+    await test.step('Step 1: Request a license', async () => {
       const response = await licenseClientV1.requestLicense(TEST_CUSTOMER_ID, TEST_SKU);
       expect(response.status()).toBe(200);
       const body = await response.json();
@@ -322,7 +315,7 @@ test.describe('License API Tests (v1)', () => {
       expect(licenseId.length).toBeGreaterThan(0);
     });
 
-    test('Step 2: Check license exists and is valid', async ({ licenseClientV1 }) => {
+    await test.step('Step 2: Check license exists and is valid', async () => {
       const response = await licenseClientV1.getLicense(licenseId);
       expect(response.status()).toBe(200);
       const body = await response.json();
@@ -333,7 +326,7 @@ test.describe('License API Tests (v1)', () => {
       expect(body.licenseId).toBe(licenseId);
     });
 
-    test('Step 3: Refresh the license', async ({ licenseClientV1 }) => {
+    await test.step('Step 3: Refresh the license', async () => {
       const response = await licenseClientV1.refreshLicense(licenseId);
       expect(response.status()).toBe(200);
       const body = await response.json();
@@ -344,7 +337,7 @@ test.describe('License API Tests (v1)', () => {
       expect(body.licenseId).toBe(licenseId);
     });
 
-    test('Step 4: Release the license', async ({ licenseClientV1 }) => {
+    await test.step('Step 4: Release the license', async () => {
       const response = await licenseClientV1.deleteLicense(licenseId);
       expect(response.status()).toBe(200);
       const body = await response.text();

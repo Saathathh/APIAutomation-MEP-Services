@@ -1,41 +1,16 @@
 import { test, expect } from '../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
 import { ClaimPayload } from '../../../../api/clients/authorization/ClaimClient';
+import { tryParseJson, decodeJwtPayload } from '../../../../utilities/testHelpers';
+import { AUTHZ_TEST_DATA } from '../../../../utilities/testData';
 
-const CLAIM_UUID = '70b595c3-7755-4635-b72a-60224c375dac';
+const CLAIM_UUID = AUTHZ_TEST_DATA.claimUuid;
 
-const TEST_CLAIM_1: ClaimPayload = {
-  type: 'CustomerId',
-  value: 'xxx',
-  signature:
-    'J+w7R/xRs4UWNldrawVp4cCebAe37IEVcDelD2sDKChumcspG4HCSLjLdSoPjojDGCjzsJTYXmmbip8zu7lzzH0ItWNVB7nQInRE50kgbwDIuDFVLvUwBGd0NHrl3uocWkmvrsQgiNDNIpMJF3Nl4ULUsPQ22MIG4tGZDP9V5ISJirts1kH/X0YzSq5omzmb+nIyz5ALlS/VxiG3U8M8Etwn9mu1VhImfbxUapvqicmwI17R71Q7V6ZRMxO2t5XyHcbZ3nHz7SDa2HzlDt/4HzDaQ+KFOzk1L9E7WZPtv8xhboW+w3uapl41V55IAgOhFTWWE1tc66sLdb5+D8Z8eQ==',
-};
+const TEST_CLAIM_1: ClaimPayload = AUTHZ_TEST_DATA.testClaim1;
 
-const TEST_CLAIM_2: ClaimPayload = {
-  type: 'CustomerId',
-  value: 'dummy_value',
-  signature:
-    'O0oqmYoijKaF1jrxxQOi8pzulVvMHXAp0/X2Xa7d6hWSMlfDF8Nsv4utOBBbbU3NAJF4zUXlOshEb4V14493k5foUf3d6X+Rr+U5vxvAO8FIYI4vPtWnizTuZmpkdNsfZuIvoInAx930eLtl5+nF/i3ujCgdGhabbLR8HEYbFCuGFI9BgS0Iu4c/c6G/ZGBQzdkQJrIAW/2qDWwL8yC3Dj6jG3YkpH8c72El81+km2seo33ezF7OAb+0EC7WyclTew2N8xTrAJyUFajI+PqDARX+qTcwTI5hnmFLwCB7CNUnYodPiFvr4UCHNnHPSWSipzrFM1q1ekAclH/SmQ6/SA==',
-};
+const TEST_CLAIM_2: ClaimPayload = AUTHZ_TEST_DATA.testClaim2;
 
 const CLAIMS_PAYLOAD: ClaimPayload[] = [TEST_CLAIM_1];
-
-/** Decode a JWT and return the payload as an object */
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  const parts = token.split('.');
-  if (parts.length !== 3) throw new Error('Invalid JWT format');
-  const payload = Buffer.from(parts[1], 'base64url').toString('utf-8');
-  return JSON.parse(payload);
-}
-
-/** Helper to parse JSON safely */
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
 
 test.describe('Claim Service API Tests', () => {
 
@@ -99,7 +74,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -219,7 +194,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -306,7 +281,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 

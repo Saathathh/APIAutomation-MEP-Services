@@ -1,11 +1,12 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { LICENSE_TEST_DATA } from '../../../../../utilities/testData';
 
-const TEST_FEATURE = 'FEA-MEP-CORE';
-const TEST_LICENSE_TYPE = 1;
-const TEST_ACCOUNT_ID = '1749490746699322';
-const TEST_ENTITLEMENT_ID = '3faa35cd-6e1f-48b0-8403-bea3959c2ff9';
-const TEST_USER_ID = '70b595c3-7755-4635-b72a-60224c375dac';
+const TEST_FEATURE = LICENSE_TEST_DATA.feature;
+const TEST_LICENSE_TYPE = LICENSE_TEST_DATA.licenseType;
+const TEST_ACCOUNT_ID = LICENSE_TEST_DATA.accountId;
+const TEST_ENTITLEMENT_ID = LICENSE_TEST_DATA.entitlementId;
+const TEST_USER_ID = LICENSE_TEST_DATA.userId;
 
 test.describe('License Account API Tests (v4)', () => {
 
@@ -142,13 +143,13 @@ test.describe('License Account API Tests (v4)', () => {
   });
 
   test('GET Feature - should handle non-existent accountId', async ({ licenseAccountClientV4: licenseAccountClient }) => {
-    const response = await licenseAccountClient.getFeature('1234', TEST_FEATURE, TEST_LICENSE_TYPE);
+    const response = await licenseAccountClient.getFeature('12345678123', TEST_FEATURE, TEST_LICENSE_TYPE);
     const body = await response.text();
     await test.info().attach('API Response', {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([500]).toContain(response.status());
+    expect([400, 404]).toContain(response.status());
   });
 
   test('GET Feature - should handle non-existent feature name', async ({ licenseAccountClientV4: licenseAccountClient }) => {

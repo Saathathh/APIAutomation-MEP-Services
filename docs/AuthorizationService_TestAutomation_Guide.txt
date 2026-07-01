@@ -202,52 +202,51 @@ ENDPOINT 13: GET /authorizations/Service/Health?api-version=1.0
 4. HOW IT WORKS (Architecture)
 ================================================================================
 
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                         TEST EXECUTION FLOW                             │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │                                                                         │
-  │  1. global-setup.ts runs first (env validation)                         │
-  │                                                                         │
-  │  2. ApiBaseTest.ts (test fixture) initializes:                          │
-  │     a) TokenManager.ts → fetches OAuth2 token                           │
-  │     b) Creates Playwright APIRequestContext with base URL + auth header │
-  │     c) Creates client instances: SessionClient, RoleClient, ClaimClient │
-  │                                                                         │
-  │  3. Session tests: GET/POST/DELETE session operations                    │
-  │     - Role/Claim tests call getSession() in beforeEach to ensure        │
-  │       an active session exists before testing                            │
-  │                                                                         │
-  │  4. Role tests: CRUD lifecycle (get all → get specific → create →       │
-  │     delete → verify)                                                    │
-  │                                                                         │
-  │  5. Claim tests: Add → verify in JWT → remove → verify → delete all    │
-  │     - Claims are embedded in the session JWT token                      │
-  │     - Tests decode the JWT payload to verify claim presence/absence     │
-  │                                                                         │
-  │  6. Well-Known & Health: Public endpoints, no auth needed               │
-  │                                                                         │
-  └─────────────────────────────────────────────────────────────────────────┘
+  STEP-BY-STEP: What happens when tests run
+  ──────────────────────────────────────────
 
-  IMPORTANT: Authorization tests run SERIALLY (workers: 1) because session,
-  role, and claim operations are stateful and depend on execution order.
-  This is configured in playwright.config.ts:
-    { name: 'authorization', fullyParallel: false, workers: 1 }
+  Step 1: SETUP
+    - global-setup.ts checks that environment variables are set (.env file)
+    - ApiBaseTest.ts gets an OAuth2 token via TokenManager.ts
+    - Creates API clients (SessionClient, RoleClient, ClaimClient, etc.)
+
+  Step 2: SESSION TESTS (GET, POST, DELETE)
+    - GET  /Session         → Retrieves the current session
+    - POST /Session         → Refreshes session with new expiry time
+    - DELETE /Session/{tid} → Deletes a session by its token ID
+
+  Step 3: ROLE TESTS (requires active session)
+    - Before each test: calls GET /Session to ensure session is active
+    - GET  /Role            → Lists all roles
+    - GET  /Role/{uuid}     → Gets roles for a specific user
+    - POST /Role/{uuid}     → Assigns roles to a user
+    - POST /Role/{uuid}/delete → Removes roles from a user
+
+  Step 4: CLAIM TESTS (requires active session)
+    - Before each test: calls GET /Session to ensure session is active
+    - POST   /Claim/add/{uuid}    → Adds claims (embedded in JWT token)
+    - POST   /Claim/remove/{uuid} → Removes specific claims from JWT
+    - DELETE /Claim/{uuid}        → Deletes ALL claims for a user
+
+  Step 5: PUBLIC ENDPOINTS (no auth needed)
+    - GET /.well-known/jwks                → Returns signing keys
+    - GET /.well-known/openid-configuration → Returns discovery info
+    - GET /Service/Health                   → Returns service status
+
+  IMPORTANT: Tests run ONE AT A TIME (not in parallel) because session,
+  role, and claim operations depend on each other's state.
+  Config: playwright.config.ts → { name: 'authorization', workers: 1 }
 
   Key Files:
-  ─────────────────────────────────────────────────────────────────────────
-  api/auth/TokenManager.ts                  → Token generation & caching
+  ──────────────────────────────────────────
+  api/auth/TokenManager.ts         → Gets and caches the OAuth2 token
   api/clients/authorization/
-    SessionClient.ts                        → Session endpoints (3 methods)
-    RoleClient.ts                           → Role endpoints (4 methods)
-    ClaimClient.ts                          → Claim endpoints (3 methods)
-    ServiceClient.ts                        → Health endpoint (1 method)
-  utilities/ApiBaseTest.ts                  → Shared Playwright fixtures
-  tests/api/authorization/
-    session/Session.api.spec.ts             → Session tests
-    role/Role.api.spec.ts                   → Role tests
-    claim/Claim.api.spec.ts                 → Claim tests
-    service/Service.api.spec.ts             → Health tests
-    well-known/WellKnown.api.spec.ts        → JWKS & OpenID Config tests
+    SessionClient.ts               → GET, POST, DELETE session
+    RoleClient.ts                  → GET all, GET by UUID, POST create, POST delete
+    ClaimClient.ts                 → POST add, POST remove, DELETE all
+    ServiceClient.ts               → GET health
+  utilities/ApiBaseTest.ts         → Sets up shared test fixtures
+  tests/api/authorization/         → All test spec files
 
 ================================================================================
 5. TEST CASES COVERED

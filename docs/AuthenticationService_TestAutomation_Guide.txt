@@ -182,45 +182,42 @@ ENDPOINT 8: GET /authentications/Service/Health
 4. HOW IT WORKS (Architecture)
 ================================================================================
 
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                         TEST EXECUTION FLOW                             │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │                                                                         │
-  │  1. global-setup.ts runs first (env validation)                         │
-  │                                                                         │
-  │  2. ApiBaseTest.ts (test fixture) initializes:                          │
-  │     a) TokenManager.ts → fetches OAuth2 token                           │
-  │     b) Creates Playwright APIRequestContext with base URL + auth header │
-  │     c) Creates client instances:                                        │
-  │        - AuthenticationClient                                           │
-  │        - ProductClient                                                  │
-  │        - UserClient                                                     │
-  │        - AuthServiceClient                                              │
-  │                                                                         │
-  │  3. Tests grouped by controller:                                        │
-  │     - authentication/ → POST Customer + GET CustomPing                  │
-  │     - product/ → PUT Register + GET Product                             │
-  │     - user/ → GET by UUID, GET by Email, POST Create/Update             │
-  │     - service/ → GET Health (public, no auth needed)                    │
-  │                                                                         │
-  │  4. Product tests register before fetching (PUT → GET flow)             │
-  │                                                                         │
-  └─────────────────────────────────────────────────────────────────────────┘
+  STEP-BY-STEP: What happens when tests run
+  ──────────────────────────────────────────
+
+  Step 1: SETUP
+    - global-setup.ts checks that environment variables are set (.env file)
+    - ApiBaseTest.ts gets an OAuth2 token via TokenManager.ts
+    - Creates API clients (AuthenticationClient, ProductClient, UserClient,
+      AuthServiceClient)
+
+  Step 2: AUTHENTICATION TESTS
+    - POST /Authentication/customer/{customerId} → Authenticates a customer,
+      returns JWT + user info
+    - GET  /Authentication/customPing/{message}  → Echo/ping test with message
+
+  Step 3: PRODUCT TESTS (register then fetch)
+    - PUT  /Product         → Registers a product (clientId, secret, redirectUrl)
+    - GET  /Product/{id}    → Fetches the registered product by ID
+
+  Step 4: USER TESTS
+    - GET  /User/{uuid}          → Gets user details by UUID
+    - GET  /User/email/{email}   → Gets user details by email address
+    - POST /User                 → Creates or updates a user
+
+  Step 5: PUBLIC ENDPOINT (no auth needed)
+    - GET /Service/Health → Returns service status info
 
   Key Files:
-  ─────────────────────────────────────────────────────────────────────────
-  api/auth/TokenManager.ts                  → Token generation & caching
+  ──────────────────────────────────────────
+  api/auth/TokenManager.ts         → Gets and caches the OAuth2 token
   api/clients/authentication/
-    AuthenticationClient.ts                 → Customer auth (2 methods)
-    ProductClient.ts                        → Product registration (2 methods)
-    UserClient.ts                           → User management (3 methods)
-    AuthServiceClient.ts                    → Health check (1 method)
-  utilities/ApiBaseTest.ts                  → Shared Playwright fixtures
-  tests/api/authentication/v1/
-    authentication/Authentication.api.spec.ts → Auth tests
-    product/Product.api.spec.ts               → Product tests
-    user/User.api.spec.ts                     → User tests
-    service/Service.api.spec.ts               → Health tests
+    AuthenticationClient.ts        → POST customer, GET customPing
+    ProductClient.ts               → PUT register, GET product
+    UserClient.ts                  → GET by UUID, GET by email, POST create/update
+    AuthServiceClient.ts           → GET health
+  utilities/ApiBaseTest.ts         → Sets up shared test fixtures
+  tests/api/authentication/v1/    → All test spec files
 
 ================================================================================
 5. TEST CASES COVERED

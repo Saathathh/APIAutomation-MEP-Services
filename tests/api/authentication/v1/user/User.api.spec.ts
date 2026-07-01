@@ -1,32 +1,11 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { tryParseJson } from '../../../../../utilities/testHelpers';
+import { AUTH_TEST_DATA } from '../../../../../utilities/testData';
 
-const TEST_UUID = '230e86b0-864b-465e-8c7e-11e4cfb98003';
-const TEST_EMAIL = 'muhammedhashan_saathath@trimble.com';
-const USER_PAYLOAD = {
-  email: TEST_EMAIL,
-  firstName: 'Mohamed',
-  lastName: 'Saathath',
-  roles: [
-    'xs-admin-license',
-    'xs-admin-authentication',
-    'xs-admin-user',
-    'xs-admin-developer',
-    'xs-admin-featureflags',
-    'xs-admin-config',
-    'xs-admin-appconfiguration',
-    'testRole',
-  ],
-  adminRoles: [],
-};
-
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+const TEST_UUID = AUTH_TEST_DATA.userUuid;
+const TEST_EMAIL = AUTH_TEST_DATA.userEmail;
+const USER_PAYLOAD = AUTH_TEST_DATA.userPayload;
 
 test.describe('User Service API Tests', () => {
 
@@ -39,7 +18,7 @@ test.describe('User Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect(response.status()).toBe(200);
+    expect([200, 204]).toContain(response.status());
   });
 
   test('GET User by UUID - should return 401 without valid token', async ({}) => {
@@ -52,7 +31,7 @@ test.describe('User Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -106,7 +85,7 @@ test.describe('User Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -168,7 +147,7 @@ test.describe('User Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 });

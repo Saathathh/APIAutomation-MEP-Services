@@ -1,7 +1,8 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { LICENSE_TEST_DATA } from '../../../../../utilities/testData';
 
-const TEST_EMAIL = 'selvakumar_rajendran@trimble.com';
+const TEST_EMAIL = LICENSE_TEST_DATA.customerEmail;
 
 test.describe('License Customer API Tests (v1)', () => {
 

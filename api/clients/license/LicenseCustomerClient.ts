@@ -9,6 +9,9 @@ export class LicenseCustomerClient {
 
   /** GET /licenses/v1/user/{email} */
   async getUserByEmail(email: string): Promise<APIResponse> {
+    if (!email || email.trim() === '') {
+      throw new Error('LicenseCustomerClient.getUserByEmail: email is required');
+    }
     const major = this.apiVersion.split('.')[0];
     return this.request.get(`/licenses/v${major}/user/${encodeURIComponent(email)}`);
   }
@@ -29,6 +32,9 @@ export class LicenseCustomerClient {
 
   /** GET /licenses/Customer/{customerId}/products?api-version={version} */
   async getCustomerProducts(customerId: string): Promise<APIResponse> {
+    if (!customerId || customerId.trim() === '') {
+      throw new Error('LicenseCustomerClient.getCustomerProducts: customerId is required');
+    }
     return this.request.get(`/licenses/Customer/${encodeURIComponent(customerId)}/products`, {
       params: { 'api-version': this.apiVersion },
     });

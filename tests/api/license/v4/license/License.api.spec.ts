@@ -1,11 +1,33 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { getTidToken } from '../../../../../api/auth/TokenManager';
+import { LICENSE_TEST_DATA } from '../../../../../utilities/testData';
 
-const TEST_ACCOUNT_ID = '1749490746699322';
-const TEST_LICENSE_ID = 'e9e6ba2e-bc51-4c7b-b584-e8b35d8e842e';
-const TEST_FEATURE = 'FEA-MEP-CORE';
+const TEST_ACCOUNT_ID = LICENSE_TEST_DATA.accountId;
+const TEST_FEATURE = LICENSE_TEST_DATA.feature;
 
 test.describe('License API Tests (v4)', () => {
+  let TEST_LICENSE_ID: string;
+
+  test.describe.configure({ mode: 'serial' });
+
+  test.beforeAll(async () => {
+    const token = await getTidToken();
+    const ctx = await request.newContext({
+      baseURL: process.env.BASE_URL,
+      extraHTTPHeaders: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    const response = await ctx.get(`/licenses/v4/License/account/${TEST_ACCOUNT_ID}?api-version=4`);
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.length).toBeGreaterThan(0);
+    TEST_LICENSE_ID = body[0].licenseId;
+    expect(TEST_LICENSE_ID).toBeTruthy();
+    await ctx.dispose();
+  });
 
   // ======================================================================
   // Endpoint 1: GET /licenses/v4/License/account/{accountId}
@@ -539,7 +561,7 @@ test.describe('License API Tests (v4)', () => {
     const response = await licenseClient.refreshLicenseToken(TEST_LICENSE_ID, tidToken);
     const body = await response.text();
     await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body: JSON.parse(body) }, null, 2),
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
@@ -754,14 +776,17 @@ test.describe('License API Tests (v4)', () => {
   test('E2E - get account license, get license, get feature, create & delete license', async ({ licenseClientV4: licenseClient }) => {
     // Step 1: Get Account License
     const accountLicenseResponse = await licenseClient.getAccountLicense(TEST_ACCOUNT_ID);
+    const accountLicenses = await accountLicenseResponse.json();
     await test.info().attach('Step 1 - Get Account License', {
-      body: JSON.stringify({ status: accountLicenseResponse.status(), body: await accountLicenseResponse.json() }, null, 2),
+      body: JSON.stringify({ status: accountLicenseResponse.status(), body: accountLicenses }, null, 2),
       contentType: 'text/plain',
     });
     expect(accountLicenseResponse.status()).toBe(200);
+    expect(accountLicenses.length).toBeGreaterThan(0);
+    const licenseId = accountLicenses[0].licenseId;
 
     // Step 2: Get License
-    const licenseResponse = await licenseClient.getLicense(TEST_LICENSE_ID);
+    const licenseResponse = await licenseClient.getLicense(licenseId);
     await test.info().attach('Step 2 - Get License', {
       body: JSON.stringify({ status: licenseResponse.status(), body: await licenseResponse.json() }, null, 2),
       contentType: 'text/plain',
@@ -769,7 +794,7 @@ test.describe('License API Tests (v4)', () => {
     expect(licenseResponse.status()).toBe(200);
 
     // Step 3: Get Feature
-    const featureResponse = await licenseClient.getFeature(TEST_LICENSE_ID, TEST_FEATURE);
+    const featureResponse = await licenseClient.getFeature(licenseId, TEST_FEATURE);
     await test.info().attach('Step 3 - Get Feature', {
       body: JSON.stringify({ status: featureResponse.status(), body: await featureResponse.json() }, null, 2),
       contentType: 'text/plain',

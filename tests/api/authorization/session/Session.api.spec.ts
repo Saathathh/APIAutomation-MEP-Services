@@ -1,14 +1,6 @@
 import { test, expect } from '../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
-
-/** Helper to parse JSON safely — returns parsed object or raw string */
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+import { tryParseJson } from '../../../../utilities/testHelpers';
 
 test.describe('Session Service API Tests', () => {
 
