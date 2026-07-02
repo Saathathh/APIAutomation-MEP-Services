@@ -1,13 +1,6 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
-
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+import { tryParseJson } from '../../../../../utilities/testHelpers';
 
 test.describe('Auth Service Health API Tests', () => {
 

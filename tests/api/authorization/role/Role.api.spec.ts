@@ -1,18 +1,11 @@
 import { test, expect } from '../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { tryParseJson } from '../../../../utilities/testHelpers';
+import { AUTHZ_TEST_DATA } from '../../../../utilities/testData';
 
-const ROLE_UUID = '70b595c3-7755-4635-b72a-60224c375dac';
-const TEST_ROLE_NAME = 'test123';
+const ROLE_UUID = AUTHZ_TEST_DATA.roleUuid;
+const TEST_ROLE_NAME = AUTHZ_TEST_DATA.testRoleName;
 const CREATE_ROLE_PAYLOAD = [TEST_ROLE_NAME];
-
-/** Helper to parse JSON safely */
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
 
 test.describe('Role Service API Tests', () => {
 
@@ -67,7 +60,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -80,7 +73,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await noAuthCtx.dispose();
   });
 
@@ -126,7 +119,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -189,7 +182,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401, 405]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -299,7 +292,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 

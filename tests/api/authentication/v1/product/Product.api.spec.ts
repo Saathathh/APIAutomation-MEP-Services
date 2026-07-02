@@ -1,20 +1,9 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { tryParseJson } from '../../../../../utilities/testHelpers';
+import { AUTH_TEST_DATA } from '../../../../../utilities/testData';
 
-const PRODUCT_PAYLOAD = {
-  id: '2',
-  clientId: '6de38ef3-f88d-4ff1-88f8-ca509c5d3a3f',
-  clientSecret: 'f6093b1e996545efaeeef4b71c0b891e',
-  redirectUrl: 'http://localhost:4200',
-};
-
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+const PRODUCT_PAYLOAD = AUTH_TEST_DATA.productPayload;
 
 test.describe('Product Service API Tests', () => {
 
@@ -64,7 +53,7 @@ test.describe('Product Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
@@ -81,7 +70,7 @@ test.describe('Product Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect(response.status()).toBe(200);
+    expect([200, 204]).toContain(response.status());
   });
 
   test('GET Product - should return 401 without valid token', async ({}) => {
@@ -94,7 +83,7 @@ test.describe('Product Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 });

@@ -11,6 +11,9 @@ export class LicenseAccountClient {
 
   /** GET /licenses/Account?feature={feature}&licenseType={licenseType}&api-version={version} */
   async getAccount(feature: string, licenseType: number): Promise<APIResponse> {
+    if (!feature || feature.trim() === '') {
+      throw new Error('LicenseAccountClient.getAccount: feature is required');
+    }
     return this.request.get(`${this.basePath}`, {
       params: {
         feature,
@@ -22,6 +25,12 @@ export class LicenseAccountClient {
 
   /** GET /licenses/Account/{accountId}/feature/{featureName}?licenseType={licenseType}&api-version={version} */
   async getFeature(accountId: string, featureName: string, licenseType: number): Promise<APIResponse> {
+    if (!accountId || accountId.trim() === '') {
+      throw new Error('LicenseAccountClient.getFeature: accountId is required');
+    }
+    if (!featureName || featureName.trim() === '') {
+      throw new Error('LicenseAccountClient.getFeature: featureName is required');
+    }
     return this.request.get(`${this.basePath}/${accountId}/feature/${encodeURIComponent(featureName)}`, {
       params: {
         licenseType: licenseType.toString(),
@@ -32,6 +41,9 @@ export class LicenseAccountClient {
 
   /** POST /licenses/Account/cache/reset?api-version={version} */
   async cacheReset(userIds: string[]): Promise<APIResponse> {
+    if (!userIds || userIds.length === 0) {
+      throw new Error('LicenseAccountClient.cacheReset: userIds array must not be empty');
+    }
     return this.request.post(`${this.basePath}/cache/reset`, {
       params: { 'api-version': this.apiVersion },
       data: { userIds },
@@ -40,6 +52,9 @@ export class LicenseAccountClient {
 
   /** GET /licenses/Account/entitlements/{accountId}?api-version={version} */
   async hasEntitlement(accountId: string): Promise<APIResponse> {
+    if (!accountId || accountId.trim() === '') {
+      throw new Error('LicenseAccountClient.hasEntitlement: accountId is required');
+    }
     return this.request.get(`${this.basePath}/entitlements/${accountId}`, {
       params: { 'api-version': this.apiVersion },
     });
@@ -47,6 +62,12 @@ export class LicenseAccountClient {
 
   /** GET /licenses/Account/entitlements/{entitlementId}/users/{userId}?api-version={version} */
   async getUserEntitlement(entitlementId: string, userId: string): Promise<APIResponse> {
+    if (!entitlementId || entitlementId.trim() === '') {
+      throw new Error('LicenseAccountClient.getUserEntitlement: entitlementId is required');
+    }
+    if (!userId || userId.trim() === '') {
+      throw new Error('LicenseAccountClient.getUserEntitlement: userId is required');
+    }
     return this.request.get(`${this.basePath}/entitlements/${entitlementId}/users/${userId}`, {
       params: { 'api-version': this.apiVersion },
     });

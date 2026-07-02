@@ -17,6 +17,9 @@ export class RoleClient {
 
   /** GET /Role/{uuid}?api-version=1.0 — get specific role */
   async getRole(uuid: string): Promise<APIResponse> {
+    if (!uuid || uuid.trim() === '') {
+      throw new Error('RoleClient.getRole: uuid is required');
+    }
     return this.request.get(
       `${this.basePath}/${encodeURIComponent(uuid)}${this.queryString()}`
     );
@@ -24,6 +27,9 @@ export class RoleClient {
 
   /** POST /Role/{uuid}?api-version=1.0 — create role */
   async createRole(uuid: string, roles: string[]): Promise<APIResponse> {
+    if (!uuid || uuid.trim() === '') {
+      throw new Error('RoleClient.createRole: uuid is required');
+    }
     return this.request.post(
       `${this.basePath}/${encodeURIComponent(uuid)}${this.queryString()}`,
       { data: roles }
@@ -32,6 +38,9 @@ export class RoleClient {
 
   /** POST /Role/{uuid}/delete?api-version=1.0 — delete role */
   async deleteRole(uuid: string, roleNames: string[]): Promise<APIResponse> {
+    if (!uuid || uuid.trim() === '') {
+      throw new Error('RoleClient.deleteRole: uuid is required');
+    }
     return this.request.post(
       `${this.basePath}/${encodeURIComponent(uuid)}/delete${this.queryString()}`,
       { data: roleNames }

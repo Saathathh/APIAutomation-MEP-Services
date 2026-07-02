@@ -1,14 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { request } from '@playwright/test';
-
-/** Helper to parse JSON safely */
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+import { tryParseJson } from '../../../../utilities/testHelpers';
 
 test.describe('Service Health API Tests', () => {
 

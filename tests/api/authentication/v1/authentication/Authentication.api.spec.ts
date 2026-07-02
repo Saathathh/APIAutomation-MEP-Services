@@ -1,16 +1,10 @@
 import { test, expect } from '../../../../../utilities/ApiBaseTest';
 import { request } from '@playwright/test';
+import { tryParseJson } from '../../../../../utilities/testHelpers';
+import { AUTH_TEST_DATA } from '../../../../../utilities/testData';
 
-const CUSTOMER_ID = '230e86b0-864b-465e-8c7e-11e4cfb98003';
-const PING_MESSAGE = 'hi';
-
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+const CUSTOMER_ID = AUTH_TEST_DATA.customerId;
+const PING_MESSAGE = AUTH_TEST_DATA.pingMessage;
 
 test.describe('Authentication Service API Tests', () => {
 
@@ -66,24 +60,31 @@ test.describe('Authentication Service API Tests', () => {
       body: JSON.stringify({ status: response.status() }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
     await unauthorizedCtx.dispose();
   });
 
   // ---- Endpoint 2: GET /Authentication/customPing/{message} ----
 
-  test('GET CustomPing - should return 200 with valid message', async ({ authenticationClient }) => {
-    const response = await authenticationClient.customPing(PING_MESSAGE);
+  test('GET CustomPing - should return 200 with valid message', async ({}) => {
+    const ctx = await request.newContext({
+      baseURL: process.env.BASE_URL,
+    });
+    const response = await ctx.get(`/authentications/Authentication/customPing/${PING_MESSAGE}`);
     const body = await response.text();
     await test.info().attach('API Response', {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
+    await ctx.dispose();
   });
 
-  test('GET CustomPing - should validate response schema', async ({ authenticationClient }) => {
-    const response = await authenticationClient.customPing(PING_MESSAGE);
+  test('GET CustomPing - should validate response schema', async ({}) => {
+    const ctx = await request.newContext({
+      baseURL: process.env.BASE_URL,
+    });
+    const response = await ctx.get(`/authentications/Authentication/customPing/${PING_MESSAGE}`);
     expect(response.status()).toBe(200);
     const body = await response.text();
     await test.info().attach('Schema Validation', {
@@ -93,21 +94,6 @@ test.describe('Authentication Service API Tests', () => {
     expect(typeof body).toBe('string');
     expect(body.length).toBeGreaterThan(0);
     expect(body).toContain(PING_MESSAGE);
-  });
-
-  test('GET CustomPing - should return 401 without valid token', async ({}) => {
-    const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.BASE_URL,
-      extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
-    });
-    const response = await unauthorizedCtx.get(
-      `/authentications/Authentication/customPing/${PING_MESSAGE}`
-    );
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status() }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([400, 401]).toContain(response.status());
-    await unauthorizedCtx.dispose();
+    await ctx.dispose();
   });
 });

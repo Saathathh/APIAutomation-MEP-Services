@@ -187,47 +187,60 @@ ENDPOINT 18: GET /licenses/Customer/{customerId}/products?api-version=1.0
 4. HOW IT WORKS (Architecture)
 ================================================================================
 
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                         TEST EXECUTION FLOW                             │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │                                                                         │
-  │  1. global-setup.ts runs first (env validation)                         │
-  │                                                                         │
-  │  2. ApiBaseTest.ts (test fixture) initializes:                          │
-  │     a) TokenManager.ts → fetches OAuth2 token                           │
-  │     b) Creates Playwright APIRequestContext with base URL + auth header │
-  │     c) Creates client instances:                                        │
-  │        - LicenseClient (v1, v3, v4)                                     │
-  │        - LicenseAccountClient (v3, v4)                                  │
-  │        - LicenseCustomerClient (v1)                                     │
-  │                                                                         │
-  │  3. Tests grouped by version and controller:                            │
-  │     - v4/account/ → Account endpoints (v4)                              │
-  │     - v4/license/ → License CRUD + Token + Renew (v4)                   │
-  │     - v3/account/ → Account endpoints (v3)                              │
-  │     - v3/license/ → License CRUD + Token + Renew (v3)                   │
-  │     - v1/customer/ → Customer/User endpoints                            │
-  │     - v1/license/ → Request/Check/Refresh/Release license               │
-  │                                                                         │
-  │  4. Create tests always clean up (delete created licenses)              │
-  │                                                                         │
-  └─────────────────────────────────────────────────────────────────────────┘
+  STEP-BY-STEP: What happens when tests run
+  ──────────────────────────────────────────
+
+  Step 1: SETUP
+    - global-setup.ts checks that environment variables are set (.env file)
+    - ApiBaseTest.ts gets an OAuth2 token via TokenManager.ts
+    - Creates API clients: LicenseClient, LicenseAccountClient,
+      LicenseCustomerClient (for v1, v3, v4)
+
+  Step 2: LICENSE TESTS (v3/v4)
+    - GET    /License/account/{accountId}  → List all licenses for an account
+    - GET    /License/{licenseId}/feature/{featureName} → Get feature details
+    - GET    /License/{licenseId}          → Get license details
+    - POST   /License                      → Create a new license
+    - DELETE /License/{licenseId}          → Delete a license
+    - PUT    /License/updateToken          → Refresh the license token
+    - PUT    /License/renew               → Renew an existing license
+
+  Step 3: LICENSE TESTS (v1)
+    - GET    /License/{customerId}/product/{sku} → Request license for user
+    - GET    /License/{licenseId}               → Check license validity
+    - POST   /License/{licenseId}               → Refresh a license
+    - DELETE /License/{licenseId}               → Release a license
+
+  Step 4: ACCOUNT TESTS (v3/v4)
+    - GET  /Account?feature=X&licenseType=Y    → Get accounts by feature/type
+    - GET  /Account/{accountId}/feature/{name} → Get feature for an account
+    - POST /Account/cache/reset                → Reset cache for user IDs
+    - GET  /Account/entitlements/{accountId}   → Check entitlements (v4 only)
+    - GET  /Account/entitlements/{id}/users/{userId} → User entitlement (v4)
+
+  Step 5: CUSTOMER TESTS (v1)
+    - GET /v1/user/{email}                → Get user by email
+    - GET /Customer/listall               → List all customers
+    - GET /Customer/list                  → List customers (filtered)
+    - GET /Customer/{customerId}/products → Get products for a customer
+
+  CLEANUP: Create tests always delete the licenses they created afterward.
 
   Key Files:
-  ─────────────────────────────────────────────────────────────────────────
-  api/auth/TokenManager.ts                  → Token generation & caching
+  ──────────────────────────────────────────
+  api/auth/TokenManager.ts         → Gets and caches the OAuth2 token
   api/clients/license/
-    LicenseClient.ts                        → License endpoints (8 methods)
-    LicenseAccountClient.ts                 → Account endpoints (5 methods)
-    LicenseCustomerClient.ts                → Customer endpoints (4 methods)
-  utilities/ApiBaseTest.ts                  → Shared Playwright fixtures
+    LicenseClient.ts               → License CRUD + token + renew (8 methods)
+    LicenseAccountClient.ts        → Account queries + cache reset (5 methods)
+    LicenseCustomerClient.ts       → Customer/user lookup (4 methods)
+  utilities/ApiBaseTest.ts         → Sets up shared test fixtures
   tests/api/license/
-    v4/account/Account.api.spec.ts          → v4 Account tests
-    v4/license/License.api.spec.ts          → v4 License tests
-    v3/account/Account.api.spec.ts          → v3 Account tests
-    v3/license/License.api.spec.ts          → v3 License tests
-    v1/customer/Customer.api.spec.ts        → v1 Customer tests
-    v1/license/License.api.spec.ts          → v1 License tests
+    v4/account/Account.api.spec.ts → v4 Account tests
+    v4/license/License.api.spec.ts → v4 License tests
+    v3/account/Account.api.spec.ts → v3 Account tests
+    v3/license/License.api.spec.ts → v3 License tests
+    v1/customer/Customer.api.spec.ts → v1 Customer tests
+    v1/license/License.api.spec.ts → v1 License tests
 
 ================================================================================
 5. TEST CASES COVERED

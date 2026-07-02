@@ -66,34 +66,38 @@ Endpoint 3: GET /featureflags/{version}/Flags/ListAvailable/{category}
 3. HOW IT WORKS (Architecture)
 ================================================================================
 
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                         TEST EXECUTION FLOW                             │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │                                                                         │
-  │  1. global-setup.ts runs first (pre-test setup, e.g., env validation)   │
-  │                                                                         │
-  │  2. ApiBaseTest.ts (test fixture) initializes:                          │
-  │     a) TokenManager.ts → fetches OAuth2 token (client_credentials)      │
-  │     b) Creates Playwright APIRequestContext with base URL + auth header │
-  │     c) Creates FeatureFlagClient (v2 and v3) instances                  │
-  │                                                                         │
-  │  3. Test spec files use fixtures to call API endpoints                  │
-  │     - featureFlagClientV2 → calls v2 endpoints                          │
-  │     - featureFlagClientV3 → calls v3 endpoints                          │
-  │                                                                         │
-  │  4. Assertions validate status codes, response schemas, error handling  │
-  │                                                                         │
-  └─────────────────────────────────────────────────────────────────────────┘
+  STEP-BY-STEP: What happens when tests run
+  ──────────────────────────────────────────
+
+  Step 1: SETUP
+    - global-setup.ts checks that environment variables are set (.env file)
+    - ApiBaseTest.ts gets an OAuth2 token via TokenManager.ts
+    - Creates FeatureFlagClient instances for v2 and v3
+
+  Step 2: LIST ALL FLAGS (v2 and v3)
+    - GET /featureflags/{version}/Flags/ListAvailable
+      → Returns array of all available flag names
+
+  Step 3: CHECK SINGLE FLAG (v2 and v3)
+    - GET /featureflags/{version}/Flags/IsAvailable/{flagName}
+      → Returns true/false for a specific flag
+
+  Step 4: LIST FLAGS BY CATEGORY (v2 and v3)
+    - GET /featureflags/{version}/Flags/ListAvailable/{category}
+      → Returns flags filtered by category name
+
+  NOTE: All 3 endpoints are tested identically for both v2 and v3.
+  Tests validate: happy path, schema, auth errors (401), edge cases.
 
   Key Files:
-  ─────────────────────────────────────────────────────────────────────────
-  api/auth/TokenManager.ts           → Token generation & caching (Okta TOTP)
-  api/clients/featureflag/           → FeatureFlagClient class (API wrapper)
-    FeatureFlagClient.ts
-  utilities/ApiBaseTest.ts           → Playwright fixtures (shared setup)
-  tests/api/featureflag/v2/          → v2 test cases
+  ──────────────────────────────────────────
+  api/auth/TokenManager.ts              → Gets and caches the OAuth2 token
+  api/clients/featureflag/
+    FeatureFlagClient.ts                → GET listAvailable, isAvailable, byCategory
+  utilities/ApiBaseTest.ts              → Sets up shared test fixtures
+  tests/api/featureflag/v2/             → v2 test cases
     FeatureFlag.api.spec.ts
-  tests/api/featureflag/v3/          → v3 test cases
+  tests/api/featureflag/v3/             → v3 test cases
     FeatureFlag.api.spec.ts
 
 ================================================================================

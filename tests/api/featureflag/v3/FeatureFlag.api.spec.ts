@@ -272,12 +272,14 @@ test.describe('Feature Flag Service API Tests (v3)', () => {
     });
     expect(listResponse.status()).toBe(200);
     expect(Array.isArray(allFlags)).toBeTruthy();
+    expect(allFlags.length).toBeGreaterThan(0);
 
-    // Step 2: Check a specific flag availability
-    const isAvailableResponse = await featureFlagClientV3.isFlagAvailable('FeatureTest1');
+    // Step 2: Pick a flag from the list and check its availability
+    const flagToCheck = allFlags[0];
+    const isAvailableResponse = await featureFlagClientV3.isFlagAvailable(flagToCheck);
     const flagResult = await isAvailableResponse.text();
-    await test.info().attach('Step 2 - IsAvailable (FeatureTest1)', {
-      body: JSON.stringify({ status: isAvailableResponse.status(), body: flagResult }, null, 2),
+    await test.info().attach(`Step 2 - IsAvailable (${flagToCheck})`, {
+      body: JSON.stringify({ status: isAvailableResponse.status(), flag: flagToCheck, body: flagResult }, null, 2),
       contentType: 'text/plain',
     });
     expect(isAvailableResponse.status()).toBe(200);
