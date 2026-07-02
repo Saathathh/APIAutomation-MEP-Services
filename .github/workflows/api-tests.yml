@@ -34,10 +34,6 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           SCOPE: ${{ secrets.SCOPE }}
           AUTH_URL: ${{ secrets.AUTH_URL }}
-          EMAIL: ${{ secrets.EMAIL }}
-          USERNAME: ${{ secrets.USERNAME }}
-          PASSWORD: ${{ secrets.PASSWORD }}
-          OKTA_TOTP_SECRET: ${{ secrets.OKTA_TOTP_SECRET }}
         run: npx playwright test --project=api
 
       - name: Upload test report

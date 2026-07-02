@@ -22,7 +22,10 @@ npm install
 
 3. Create a `.env` file in the root directory with the required environment variables:
 ```
-OKTA_TOTP_SECRET=<your-okta-totp-secret>
+AUTH_URL=<your token endpoint>
+CLIENT_ID=<your client id>
+CLIENT_SECRET=<your client secret>
+SCOPE=<your oauth scope>
 ```
 
 ## Running Tests
@@ -53,7 +56,7 @@ npx playwright show-report
 ```
 ├── api/
 │   ├── auth/
-│   │   └── TokenManager.ts          # Token acquisition and caching (Okta TOTP)
+│   │   └── TokenManager.ts          # Token acquisition and caching (client_credentials)
 │   └── clients/
 │       ├── authentication/           # Auth API clients (AuthService, Product, User)
 │       ├── authorization/            # Authorization API clients (Claim, Role, Session)
@@ -82,7 +85,7 @@ npx playwright show-report
 
 ## Key Features
 
-- **Token Management** - Automatic token acquisition via Okta TOTP with caching
+- **Token Management** - Automatic token acquisition via OAuth2 client_credentials with caching
 - **Custom Fixtures** - Reusable API clients injected via Playwright fixtures
 - **Multi-version Support** - Tests for multiple API versions (v1, v2, v3, v4)
 - **CI Ready** - Configured with retries and single worker for CI environments
