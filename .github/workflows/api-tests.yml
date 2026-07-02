@@ -2,8 +2,9 @@ name: API Tests
 
 on:
   push:
+    branches: [main, master, prod-ready-code]
   pull_request:
-    branches: [main]
+    branches: [main, master, prod-ready-code]
   workflow_dispatch:
 
 jobs:
