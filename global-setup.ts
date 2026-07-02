@@ -1,6 +1,14 @@
-import { getTidToken } from './api/auth/TokenManager';
+import { getTidToken, getTokenEndpointDebugInfo } from './api/auth/TokenManager';
 
 async function globalSetup() {
+  try {
+    const info = getTokenEndpointDebugInfo();
+    console.log('[GlobalSetup] OAuth endpoint configured:', info.configuredAuthUrl);
+    console.log('[GlobalSetup] Token endpoint candidates:', info.candidateEndpoints.join(' | '));
+  } catch (error) {
+    console.warn('[GlobalSetup] OAuth endpoint debug unavailable:', error instanceof Error ? error.message : error);
+  }
+
   console.log('[GlobalSetup] Acquiring TID token...');
   try {
     const token = await getTidToken();
