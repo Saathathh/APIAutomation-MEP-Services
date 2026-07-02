@@ -99,6 +99,21 @@ export async function getTidToken(): Promise<string> {
     channel: 'chrome',
   });
 
+  const usernameSelectors = [
+    'input[name="username"]:visible',
+    'input[name="identifier"]:visible',
+    'input[type="email"]:visible',
+    'input[type="text"]:visible',
+  ].join(', ');
+
+  const passwordSelectors = [
+    'input[type="password"]:visible',
+    'input[name="password"]:visible',
+    'input[name="credentials.passcode"]:visible',
+    '#okta-signin-password:visible',
+    'input[id*="password"]:visible',
+  ].join(', ');
+
   try {
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -131,20 +146,29 @@ export async function getTidToken(): Promise<string> {
     await nextBtn.click();
 
     // Step 2: Okta login page — enter username
-    const oktaUsernameInput = page.locator('input[type="text"]:visible, input[name="username"]:visible, input[name="identifier"]:visible').first();
+    const oktaUsernameInput = page.locator(usernameSelectors).first();
     await oktaUsernameInput.waitFor({ timeout: 60000 });
     await oktaUsernameInput.fill(process.env.USERNAME!);
 
     // Okta may have a "Next" button between username and password (two-step flow)
-    const oktaNextBtn = page.locator('button[type="submit"], input[type="submit"]').first();
-    const passwordAlreadyVisible = await page.locator('input[type="password"]:visible').first().isVisible().catch(() => false);
+    const oktaNextBtn = page.getByRole('button', { name: /next|sign in|log in|continue/i }).first();
+    const oktaSubmitFallback = page.locator('button[type="submit"], input[type="submit"]').first();
+    const passwordField = page.locator(passwordSelectors).first();
+    const passwordAlreadyVisible = await passwordField.isVisible().catch(() => false);
     if (!passwordAlreadyVisible) {
-      await oktaNextBtn.click();
-      await page.waitForTimeout(2000);
+      if (await oktaNextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await oktaNextBtn.click();
+      } else if (await oktaSubmitFallback.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await oktaSubmitFallback.click();
+      } else {
+        await oktaUsernameInput.press('Enter');
+      }
+
+      await passwordField.waitFor({ timeout: 60000 });
     }
 
     // Enter password
-    const passwordInput = page.locator('input[type="password"]:visible').first();
+    const passwordInput = page.locator(passwordSelectors).first();
     await passwordInput.waitFor({ timeout: 60000 });
     await passwordInput.fill(process.env.PASSWORD!);
 
@@ -200,7 +224,11 @@ export async function getTidToken(): Promise<string> {
       try {
         const pages = browser.contexts()[0]?.pages();
         if (pages && pages.length > 0) {
-          await pages[0].screenshot({ path: 'test-results/auth-failure.png', fullPage: true });
+          const failedPage = pages[0];
+          await fs.promises.mkdir('test-results', { recursive: true });
+          await failedPage.screenshot({ path: 'test-results/auth-failure.png', fullPage: true });
+          await fs.promises.writeFile('test-results/auth-failure.html', await failedPage.content(), 'utf-8');
+          await fs.promises.writeFile('test-results/auth-failure-url.txt', failedPage.url(), 'utf-8');
         }
       } catch { /* ignore screenshot errors */ }
     }
