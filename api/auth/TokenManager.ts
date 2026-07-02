@@ -99,33 +99,11 @@ export async function getTidToken(): Promise<string> {
     channel: 'chrome',
   });
 
-  const usernameSelectors = [
-    'input[name="username"]:visible',
-    'input[name="identifier"]:visible',
-    'input[type="email"]:visible',
-    'input[type="text"]:visible',
-  ].join(', ');
-
-  const passwordSelectors = [
-    'input[type="password"]:visible',
-    'input[name="password"]:visible',
-    'input[name="credentials.passcode"]:visible',
-    '#okta-signin-password:visible',
-    'input[id*="password"]:visible',
-  ].join(', ');
-
   try {
     const context = await browser.newContext();
     const page = await context.newPage();
 
     // Intercept the Postman callback to prevent navigation away
-    await page.route(`${redirectUri}**`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: '<html><body><h1>Token captured</h1></body></html>',
-      });
-    });
 
     // Navigate to login page
     await page.goto(authorizeUrl);
@@ -146,95 +124,46 @@ export async function getTidToken(): Promise<string> {
     await nextBtn.click();
 
     // Step 2: Okta login page — enter username
-    const oktaUsernameInput = page.locator(usernameSelectors).first();
+    const oktaUsernameInput = page.locator('input[type="text"]:visible, input[name="username"]:visible, input[name="identifier"]:visible').first();
     await oktaUsernameInput.waitFor({ timeout: 60000 });
     await oktaUsernameInput.fill(process.env.USERNAME!);
 
     // Okta may have a "Next" button between username and password (two-step flow)
-    const oktaNextBtn = page.getByRole('button', { name: /next|sign in|log in|continue/i }).first();
-    const oktaSubmitFallback = page.locator('button[type="submit"], input[type="submit"]').first();
-    const passwordField = page.locator(passwordSelectors).first();
-    const passwordAlreadyVisible = await passwordField.isVisible().catch(() => false);
+    const oktaNextBtn = page.locator('button[type="submit"], input[type="submit"]').first();
+    const passwordAlreadyVisible = await page.locator('input[type="password"]:visible').first().isVisible().catch(() => false);
     if (!passwordAlreadyVisible) {
-      if (await oktaNextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await oktaNextBtn.click();
-      } else if (await oktaSubmitFallback.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await oktaSubmitFallback.click();
-      } else {
-        await oktaUsernameInput.press('Enter');
-      }
-
-      // Don't force password here: some tenants jump directly to MFA or callback.
+      await oktaNextBtn.click();
+      await page.waitForTimeout(2000);
     }
 
-    const googleAuthLink = page.getByRole('link', { name: /google authenticator|authenticator app|google/i }).first();
-    const codeInput = page.getByRole('textbox', { name: /enter code|verification code|passcode/i }).first();
+    // Enter password
+    const passwordInput = page.locator('input[type="password"]:visible').first();
+    await passwordInput.waitFor({ timeout: 60000 });
+    await passwordInput.fill(process.env.PASSWORD!);
 
-    type AuthStage = 'callback' | 'password' | 'mfa-link' | 'mfa-code';
-    const waitForAuthStage = async (timeoutMs: number): Promise<AuthStage> => {
-      const started = Date.now();
-      while (Date.now() - started < timeoutMs) {
-        if (page.url().startsWith(redirectUri)) return 'callback';
-        if (await passwordField.isVisible().catch(() => false)) return 'password';
-        if (await codeInput.isVisible().catch(() => false)) return 'mfa-code';
-        if (await googleAuthLink.isVisible().catch(() => false)) return 'mfa-link';
+    // Click sign-in on Okta
+    const signInBtn = page.locator('button[type="submit"], input[type="submit"]').first();
+    await signInBtn.click();
 
-        const alert = page.locator('[role="alert"], .o-form-error-container, .infobox-error').first();
-        if (await alert.isVisible().catch(() => false)) {
-          const msg = (await alert.innerText().catch(() => '')).trim();
-          if (msg) {
-            throw new Error(`Authentication page error: ${msg}`);
-          }
-        }
+    // Step 3: Google Authenticator MFA
+    const googleAuthLink = page.getByRole('link', { name: /google authenticator/i }).first();
+    await googleAuthLink.waitFor({ state: 'visible', timeout: 15000 });
+    await googleAuthLink.click();
 
-        await page.waitForTimeout(500);
-      }
+    // Wait for TOTP code input
+    const codeInput = page.getByRole('textbox', { name: /enter code/i }).first();
+    await codeInput.waitFor({ state: 'visible', timeout: 15000 });
 
-      throw new Error(`Could not detect auth stage in ${timeoutMs}ms (url=${page.url()})`);
-    };
+    // Generate and fill TOTP
+    const totp = generateTotp();
+    await codeInput.fill(totp);
 
-    const initialStage = await waitForAuthStage(60000);
-    console.log(`[TokenManager] Auth stage detected after username: ${initialStage}`);
-
-    if (initialStage === 'password') {
-      // Enter password only when the tenant flow actually requires it.
-      const passwordInput = page.locator(passwordSelectors).first();
-      await passwordInput.fill(process.env.PASSWORD!);
-
-      const signInBtn = page.getByRole('button', { name: /sign in|log in|verify|continue/i }).first();
-      if (await signInBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await signInBtn.click();
-      } else {
-        await oktaSubmitFallback.click();
-      }
-    }
-
-    const postPasswordStage = initialStage === 'password' ? await waitForAuthStage(60000) : initialStage;
-    console.log(`[TokenManager] Auth stage before MFA/token redirect: ${postPasswordStage}`);
-
-    if (postPasswordStage === 'callback') {
-      // Token already returned without MFA prompt.
-    } else if (postPasswordStage === 'mfa-link') {
-      await googleAuthLink.click();
-      await codeInput.waitFor({ state: 'visible', timeout: 30000 });
-    } else if (postPasswordStage === 'mfa-code') {
-      await codeInput.waitFor({ state: 'visible', timeout: 30000 });
+    // Click Verify
+    const verifyButton = page.getByRole('button', { name: /verify/i }).first();
+    if (await verifyButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await verifyButton.click();
     } else {
-      throw new Error(`Unexpected auth stage after password step: ${postPasswordStage}`);
-    }
-
-    if (!page.url().startsWith(redirectUri)) {
-      // Generate and fill TOTP when MFA code entry is present.
-      const totp = generateTotp();
-      await codeInput.fill(totp);
-
-      // Click Verify
-      const verifyButton = page.getByRole('button', { name: /verify|sign in|continue|submit/i }).first();
-      if (await verifyButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await verifyButton.click();
-      } else {
-        await page.locator('button[type="submit"], input[type="submit"]').first().click();
-      }
+      await page.locator('button[type="submit"], input[type="submit"]').first().click();
     }
 
     // Wait for redirect to Postman callback with token
@@ -264,11 +193,7 @@ export async function getTidToken(): Promise<string> {
       try {
         const pages = browser.contexts()[0]?.pages();
         if (pages && pages.length > 0) {
-          const failedPage = pages[0];
-          await fs.promises.mkdir('test-results', { recursive: true });
-          await failedPage.screenshot({ path: 'test-results/auth-failure.png', fullPage: true });
-          await fs.promises.writeFile('test-results/auth-failure.html', await failedPage.content(), 'utf-8');
-          await fs.promises.writeFile('test-results/auth-failure-url.txt', failedPage.url(), 'utf-8');
+          await pages[0].screenshot({ path: 'test-results/auth-failure.png', fullPage: true });
         }
       } catch { /* ignore screenshot errors */ }
     }
