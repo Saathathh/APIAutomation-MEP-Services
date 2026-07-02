@@ -13,6 +13,11 @@ interface CachedToken {
   expires_at: number;
 }
 
+interface TokenResponse {
+  access_token?: string;
+  expires_in?: number;
+}
+
 function readCachedToken(): string | null {
   try {
     if (fs.existsSync(TOKEN_CACHE_PATH)) {
@@ -31,6 +36,74 @@ function cacheToken(access_token: string, expires_in: number): void {
     expires_at: Date.now() + (expires_in - 60) * 1000,
   };
   fs.writeFileSync(TOKEN_CACHE_PATH, JSON.stringify(data));
+}
+
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} environment variable is not set`);
+  }
+  return value;
+}
+
+function getClientCredentialsEndpoints(authUrl: string): string[] {
+  const endpoints = new Set([authUrl]);
+  try {
+    const tokenUrl = new URL(authUrl);
+    tokenUrl.search = '';
+    tokenUrl.hash = '';
+    tokenUrl.pathname = tokenUrl.pathname.replace(/\/authorize\/?$/, '/token');
+    endpoints.add(tokenUrl.toString());
+  } catch {
+    // Ignore invalid URL parsing here; the request attempt will surface the real error.
+  }
+  return [...endpoints];
+}
+
+async function getClientCredentialsToken(): Promise<string | null> {
+  const clientSecret = process.env.CLIENT_SECRET?.trim();
+  if (!clientSecret) {
+    return null;
+  }
+
+  const clientId = getRequiredEnv('CLIENT_ID');
+  const scope = getRequiredEnv('SCOPE');
+  const authUrl = getRequiredEnv('AUTH_URL');
+  let lastError: Error | null = null;
+
+  for (const endpoint of getClientCredentialsEndpoints(authUrl)) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: clientId,
+          client_secret: clientSecret,
+          scope,
+        }).toString(),
+      });
+
+      const responseText = await response.text();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${responseText.slice(0, 200)}`);
+      }
+
+      const payload = JSON.parse(responseText) as TokenResponse;
+      if (!payload.access_token) {
+        throw new Error('Token response did not include an access_token');
+      }
+
+      cacheToken(payload.access_token, payload.expires_in ?? 3600);
+      return payload.access_token;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  throw lastError ?? new Error('Client credentials flow failed');
 }
 
 function generateTotp(): string {
@@ -83,15 +156,24 @@ export async function getTidToken(): Promise<string> {
   const cached = readCachedToken();
   if (cached) return cached;
 
+  try {
+    const clientCredentialsToken = await getClientCredentialsToken();
+    if (clientCredentialsToken) {
+      return clientCredentialsToken;
+    }
+  } catch (error) {
+    console.warn('[TokenManager] Client credentials flow failed, falling back to browser login:', error instanceof Error ? error.message : error);
+  }
+
   // OAuth Implicit flow (response_type=token) — matches Postman config exactly
-  const authorizeEndpoint = process.env.AUTH_URL!;
+  const authorizeEndpoint = getRequiredEnv('AUTH_URL');
   const redirectUri = 'https://oauth.pstmn.io/v1/callback';
   const authorizeUrl = `${authorizeEndpoint}?` +
     new URLSearchParams({
-      client_id: process.env.CLIENT_ID!,
+      client_id: getRequiredEnv('CLIENT_ID'),
       response_type: 'token',
       redirect_uri: redirectUri,
-      scope: process.env.SCOPE!,
+      scope: getRequiredEnv('SCOPE'),
     }).toString();
 
   const browser = await chromium.launch({
@@ -112,7 +194,7 @@ export async function getTidToken(): Promise<string> {
     const emailInput = page.locator('input:visible').first();
     await emailInput.waitFor({ timeout: 60000 });
     await emailInput.click();
-    await page.keyboard.type(process.env.EMAIL!, { delay: 50 });
+    await page.keyboard.type(getRequiredEnv('EMAIL'), { delay: 50 });
 
     // Click next to go to Okta
     const nextBtn = page.locator('#enter_username_submit');
@@ -126,7 +208,7 @@ export async function getTidToken(): Promise<string> {
     // Step 2: Okta login page — enter username
     const oktaUsernameInput = page.locator('input[type="text"]:visible, input[name="username"]:visible, input[name="identifier"]:visible').first();
     await oktaUsernameInput.waitFor({ timeout: 60000 });
-    await oktaUsernameInput.fill(process.env.USERNAME!);
+    await oktaUsernameInput.fill(getRequiredEnv('USERNAME'));
 
     // Okta may have a "Next" button between username and password (two-step flow)
     const oktaNextBtn = page.locator('button[type="submit"], input[type="submit"]').first();
@@ -139,7 +221,7 @@ export async function getTidToken(): Promise<string> {
     // Enter password
     const passwordInput = page.locator('input[type="password"]:visible').first();
     await passwordInput.waitFor({ timeout: 60000 });
-    await passwordInput.fill(process.env.PASSWORD!);
+    await passwordInput.fill(getRequiredEnv('PASSWORD'));
 
     // Click sign-in on Okta
     const signInBtn = page.locator('button[type="submit"], input[type="submit"]').first();

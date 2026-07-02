@@ -20,10 +20,7 @@ cd APIAutomation
 npm install
 ```
 
-3. Create a `.env` file in the root directory with the required environment variables:
-```
-OKTA_TOTP_SECRET=<your-okta-totp-secret>
-```
+3. Create a `.env` file in the root directory with the required environment variables from `.env.example`.
 
 ## Running Tests
 
@@ -82,7 +79,7 @@ npx playwright show-report
 
 ## Key Features
 
-- **Token Management** - Automatic token acquisition via Okta TOTP with caching
+- **Token Management** - Automatic token acquisition via client credentials when available, with cached browser-based Okta TOTP fallback
 - **Custom Fixtures** - Reusable API clients injected via Playwright fixtures
 - **Multi-version Support** - Tests for multiple API versions (v1, v2, v3, v4)
 - **CI Ready** - Configured with retries and single worker for CI environments
