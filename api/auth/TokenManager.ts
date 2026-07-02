@@ -104,13 +104,6 @@ export async function getTidToken(): Promise<string> {
     const page = await context.newPage();
 
     // Intercept the Postman callback to prevent navigation away
-    await page.route(`${redirectUri}**`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: '<html><body><h1>Token captured</h1></body></html>',
-      });
-    });
 
     // Navigate to login page
     await page.goto(authorizeUrl);
