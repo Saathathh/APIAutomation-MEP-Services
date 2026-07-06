@@ -121,7 +121,7 @@ export async function getTidToken(): Promise<string> {
     await emailInput.click();
     await page.keyboard.type(process.env.EMAIL!, { delay: 50 });
 
-    // Click next to go to Okta
+    // Click next
     const nextBtn = page.locator('#enter_username_submit');
     await nextBtn.waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForFunction(
@@ -130,33 +130,19 @@ export async function getTidToken(): Promise<string> {
     );
     await nextBtn.click();
 
-    // Wait for navigation away from Trimble Identity page to Okta
-    await page.waitForURL(/.*okta.*|.*oktapreview.*/i, { timeout: 60000 });
-
-    // Step 2: Okta login page — enter username
-    const oktaUsernameInput = page.locator('input[name="identifier"], input[name="username"], input[type="text"]').first();
-    await oktaUsernameInput.waitFor({ state: 'visible', timeout: 60000 });
-    await oktaUsernameInput.fill(process.env.USERNAME!);
-
-    // Okta may have a "Next" button between username and password (two-step flow)
-    const oktaNextBtn = page.locator('button[type="submit"], input[type="submit"]').first();
-    const passwordAlreadyVisible = await page.locator('input[type="password"]:visible').count().then(c => c > 0).catch(() => false);
-    if (!passwordAlreadyVisible) {
-      await oktaNextBtn.click();
-    }
-
-    // Wait for Okta password field (exclude Trimble Identity hidden field by checking visibility)
-    const passwordInput = page.locator('input[type="password"]:visible').first();
+    // Step 2: Trimble Identity page — enter password (same domain, field becomes visible)
+    const passwordInput = page.locator('input[type="password"]').first();
     await passwordInput.waitFor({ state: 'visible', timeout: 60000 });
     await passwordInput.fill(process.env.PASSWORD!);
 
-    // Click sign-in on Okta
-    const signInBtn = page.locator('button[type="submit"], input[type="submit"]').first();
+    // Click sign-in
+    const signInBtn = page.locator('button[type="submit"], input[type="submit"], #sign_in_submit').first();
+    await signInBtn.waitFor({ state: 'visible', timeout: 30000 });
     await signInBtn.click();
 
-    // Step 3: Google Authenticator MFA
+    // Step 3: Google Authenticator MFA (may redirect to Okta for MFA or stay on Trimble)
     const googleAuthLink = page.getByRole('link', { name: /google authenticator/i }).first();
-    await googleAuthLink.waitFor({ state: 'visible', timeout: 15000 });
+    await googleAuthLink.waitFor({ state: 'visible', timeout: 60000 });
     await googleAuthLink.click();
 
     // Wait for TOTP code input
