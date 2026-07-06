@@ -1,4 +1,4 @@
-name: API Tests
+name: MEP Services API Tests
 
 on:
   push:
