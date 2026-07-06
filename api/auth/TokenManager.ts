@@ -140,12 +140,13 @@ export async function getTidToken(): Promise<string> {
     const passwordAlreadyVisible = await page.locator('input[type="password"]:visible').first().isVisible().catch(() => false);
     if (!passwordAlreadyVisible) {
       await oktaNextBtn.click();
-      await page.waitForTimeout(2000);
+      // Wait for password field to appear after page transition
+      await page.locator('input[type="password"]').first().waitFor({ state: 'visible', timeout: 60000 });
     }
 
     // Enter password
     const passwordInput = page.locator('input[type="password"]:visible').first();
-    await passwordInput.waitFor({ timeout: 60000 });
+    await passwordInput.waitFor({ state: 'visible', timeout: 60000 });
     await passwordInput.fill(process.env.PASSWORD!);
 
     // Click sign-in on Okta
