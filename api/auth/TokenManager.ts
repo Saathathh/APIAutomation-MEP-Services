@@ -122,15 +122,31 @@ export async function getTidToken(): Promise<string> {
     await page.goto(authorizeUrl, { waitUntil: 'networkidle' });
     console.log('[Auth] Page loaded:', page.url());
 
+    // Dismiss cookie consent banner if present
+    const acceptCookies = page.locator('button:has-text("Accept All"), button:has-text("Accept")').first();
+    if (await acceptCookies.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await acceptCookies.click();
+      console.log('[Auth] Cookie banner dismissed');
+    }
+
     // Step 1: Trimble Identity page — enter email
     const emailInput = page.locator('input[tcp-auto="input-email"], input[name="email"], input[type="email"], input[placeholder*="mail" i]').first();
     const genericInput = page.locator('input:visible').first();
     const targetInput = await emailInput.isVisible().catch(() => false) ? emailInput : genericInput;
     await targetInput.waitFor({ state: 'visible', timeout: 60000 });
     await targetInput.click();
-    await targetInput.fill(''); // clear any existing value
-    await page.keyboard.type(process.env.EMAIL!, { delay: 30 });
-    console.log('[Auth] Email entered');
+    // Use fill() instead of keyboard.type() — fill sets value directly, won't be interrupted
+    await targetInput.fill(process.env.EMAIL!);
+    console.log('[Auth] Email entered:', process.env.EMAIL!.substring(0, 5) + '***');
+
+    // Verify the value was set correctly
+    const filledValue = await targetInput.inputValue();
+    if (filledValue !== process.env.EMAIL!) {
+      console.log('[Auth] WARNING: Email fill mismatch. Got:', filledValue.substring(0, 5) + '***');
+      // Retry with clear + type as fallback
+      await targetInput.clear();
+      await targetInput.pressSequentially(process.env.EMAIL!, { delay: 50 });
+    }
 
     // Click next
     const nextBtn = page.locator('#enter_username_submit');
