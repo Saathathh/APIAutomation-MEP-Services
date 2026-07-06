@@ -96,11 +96,17 @@ export async function getTidToken(): Promise<string> {
 
   const browser = await chromium.launch({
     headless: !!process.env.CI,
-    channel: 'chrome',
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+    ],
   });
 
   try {
-    const context = await browser.newContext();
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
     const page = await context.newPage();
 
     // Intercept the Postman callback to prevent navigation away
@@ -113,13 +119,18 @@ export async function getTidToken(): Promise<string> {
     });
 
     // Navigate to login page
-    await page.goto(authorizeUrl);
+    await page.goto(authorizeUrl, { waitUntil: 'networkidle' });
+    console.log('[Auth] Page loaded:', page.url());
 
     // Step 1: Trimble Identity page — enter email
-    const emailInput = page.locator('input:visible').first();
-    await emailInput.waitFor({ timeout: 60000 });
-    await emailInput.click();
-    await page.keyboard.type(process.env.EMAIL!, { delay: 50 });
+    const emailInput = page.locator('input[tcp-auto="input-email"], input[name="email"], input[type="email"], input[placeholder*="mail" i]').first();
+    const genericInput = page.locator('input:visible').first();
+    const targetInput = await emailInput.isVisible().catch(() => false) ? emailInput : genericInput;
+    await targetInput.waitFor({ state: 'visible', timeout: 60000 });
+    await targetInput.click();
+    await targetInput.fill(''); // clear any existing value
+    await page.keyboard.type(process.env.EMAIL!, { delay: 30 });
+    console.log('[Auth] Email entered');
 
     // Click next
     const nextBtn = page.locator('#enter_username_submit');
@@ -128,17 +139,70 @@ export async function getTidToken(): Promise<string> {
       () => !document.querySelector('#enter_username_submit')?.hasAttribute('disabled'),
       { timeout: 10000 }
     );
-    await nextBtn.click();
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 60000 }).catch(() => {}),
+      nextBtn.click(),
+    ]);
+    console.log('[Auth] After Next click, URL:', page.url());
 
-    // Step 2: Trimble Identity page — enter password (same domain, field becomes visible)
-    const passwordInput = page.locator('input[type="password"]').first();
-    await passwordInput.waitFor({ state: 'visible', timeout: 60000 });
-    await passwordInput.fill(process.env.PASSWORD!);
+    // Take debug screenshot in CI
+    if (process.env.CI) {
+      await page.screenshot({ path: 'test-results/auth-step2-after-next.png', fullPage: true });
+    }
 
-    // Click sign-in
-    const signInBtn = page.locator('button[type="submit"], input[type="submit"], #sign_in_submit').first();
-    await signInBtn.waitFor({ state: 'visible', timeout: 30000 });
-    await signInBtn.click();
+    // Step 2: Determine if we're on Okta or still on Trimble Identity
+    const currentUrl = page.url();
+    const isOnOkta = /okta|oktapreview/i.test(currentUrl);
+    const passwordVisible = await page.locator('input[type="password"]:visible').first().isVisible().catch(() => false);
+
+    if (!isOnOkta && !passwordVisible) {
+      // Page might still be loading or need more time to redirect
+      // Wait for either: password becomes visible OR URL changes to Okta
+      console.log('[Auth] Waiting for password field or Okta redirect...');
+      await Promise.race([
+        page.locator('input[type="password"]:visible').first().waitFor({ state: 'visible', timeout: 60000 }),
+        page.waitForURL(/.*okta.*|.*oktapreview.*/i, { timeout: 60000 }),
+      ]).catch(async () => {
+        // Last resort: take screenshot and log page content
+        console.log('[Auth] Neither password nor Okta appeared. URL:', page.url());
+        await page.screenshot({ path: 'test-results/auth-stuck.png', fullPage: true });
+        throw new Error(`Auth stuck - not on Okta and no password field. URL: ${page.url()}`);
+      });
+    }
+
+    // Re-check where we ended up
+    const finalUrl = page.url();
+    const onOktaNow = /okta|oktapreview/i.test(finalUrl);
+    console.log('[Auth] Proceeding with flow. On Okta:', onOktaNow, 'URL:', finalUrl);
+
+    if (onOktaNow) {
+      // Okta flow: enter username then password
+      const oktaUsernameInput = page.locator('input[name="identifier"], input[name="username"]').first();
+      await oktaUsernameInput.waitFor({ state: 'visible', timeout: 60000 });
+      await oktaUsernameInput.fill(process.env.USERNAME || process.env.EMAIL!);
+
+      const oktaSubmit = page.locator('button[type="submit"], input[type="submit"]').first();
+      await oktaSubmit.click();
+
+      // Wait for password field on Okta
+      const oktaPassword = page.locator('input[type="password"]:visible').first();
+      await oktaPassword.waitFor({ state: 'visible', timeout: 60000 });
+      await oktaPassword.fill(process.env.PASSWORD!);
+
+      const oktaSignIn = page.locator('button[type="submit"], input[type="submit"]').first();
+      await oktaSignIn.click();
+    } else {
+      // Trimble Identity flow: password on same page
+      const passwordInput = page.locator('input[type="password"]:visible').first();
+      await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+      await passwordInput.fill(process.env.PASSWORD!);
+
+      const signInBtn = page.locator('#sign_in_submit, button[type="submit"], input[type="submit"]').first();
+      await signInBtn.waitFor({ state: 'visible', timeout: 30000 });
+      await signInBtn.click();
+    }
+
+    console.log('[Auth] Credentials submitted. URL:', page.url());
 
     // Step 3: Google Authenticator MFA (may redirect to Okta for MFA or stay on Trimble)
     const googleAuthLink = page.getByRole('link', { name: /google authenticator/i }).first();
