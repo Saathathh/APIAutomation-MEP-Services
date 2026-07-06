@@ -130,21 +130,22 @@ export async function getTidToken(): Promise<string> {
     );
     await nextBtn.click();
 
+    // Wait for navigation away from Trimble Identity page to Okta
+    await page.waitForURL(/.*okta.*|.*oktapreview.*/i, { timeout: 60000 });
+
     // Step 2: Okta login page — enter username
-    const oktaUsernameInput = page.locator('input[type="text"]:visible, input[name="username"]:visible, input[name="identifier"]:visible').first();
-    await oktaUsernameInput.waitFor({ timeout: 60000 });
+    const oktaUsernameInput = page.locator('input[name="identifier"], input[name="username"], input[type="text"]').first();
+    await oktaUsernameInput.waitFor({ state: 'visible', timeout: 60000 });
     await oktaUsernameInput.fill(process.env.USERNAME!);
 
     // Okta may have a "Next" button between username and password (two-step flow)
     const oktaNextBtn = page.locator('button[type="submit"], input[type="submit"]').first();
-    const passwordAlreadyVisible = await page.locator('input[type="password"]:visible').first().isVisible().catch(() => false);
+    const passwordAlreadyVisible = await page.locator('input[type="password"]:visible').count().then(c => c > 0).catch(() => false);
     if (!passwordAlreadyVisible) {
       await oktaNextBtn.click();
-      // Wait for password field to appear after page transition
-      await page.locator('input[type="password"]').first().waitFor({ state: 'visible', timeout: 60000 });
     }
 
-    // Enter password
+    // Wait for Okta password field (exclude Trimble Identity hidden field by checking visibility)
     const passwordInput = page.locator('input[type="password"]:visible').first();
     await passwordInput.waitFor({ state: 'visible', timeout: 60000 });
     await passwordInput.fill(process.env.PASSWORD!);
