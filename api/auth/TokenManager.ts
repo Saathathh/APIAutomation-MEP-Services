@@ -176,21 +176,32 @@ export async function getTidToken(): Promise<string> {
     console.log('[Auth] Proceeding with flow. On Okta:', onOktaNow, 'URL:', finalUrl);
 
     if (onOktaNow) {
-      // Okta flow: enter username then password
+      // Okta flow: username + password on same page (classic Okta Sign-In Widget)
       const oktaUsernameInput = page.locator('input[name="identifier"], input[name="username"]').first();
       await oktaUsernameInput.waitFor({ state: 'visible', timeout: 60000 });
-      await oktaUsernameInput.fill(process.env.USERNAME || process.env.EMAIL!);
+      // Use short username for Okta (e.g. 'msaatha')
+      await oktaUsernameInput.fill(process.env.USERNAME!);
 
-      const oktaSubmit = page.locator('button[type="submit"], input[type="submit"]').first();
-      await oktaSubmit.click();
-
-      // Wait for password field on Okta
+      // Check if password is already visible (single-page Okta form)
       const oktaPassword = page.locator('input[type="password"]:visible').first();
-      await oktaPassword.waitFor({ state: 'visible', timeout: 60000 });
-      await oktaPassword.fill(process.env.PASSWORD!);
+      const pwdAlreadyVisible = await oktaPassword.isVisible().catch(() => false);
 
-      const oktaSignIn = page.locator('button[type="submit"], input[type="submit"]').first();
-      await oktaSignIn.click();
+      if (pwdAlreadyVisible) {
+        // Single-page form: fill password and click Sign In once
+        await oktaPassword.fill(process.env.PASSWORD!);
+        const oktaSignIn = page.locator('button[type="submit"], input[type="submit"]').first();
+        await oktaSignIn.click();
+      } else {
+        // Two-step: submit username first, then password
+        const oktaSubmit = page.locator('button[type="submit"], input[type="submit"]').first();
+        await oktaSubmit.click();
+
+        await oktaPassword.waitFor({ state: 'visible', timeout: 60000 });
+        await oktaPassword.fill(process.env.PASSWORD!);
+
+        const oktaSignIn = page.locator('button[type="submit"], input[type="submit"]').first();
+        await oktaSignIn.click();
+      }
     } else {
       // Trimble Identity flow: password on same page
       const passwordInput = page.locator('input[type="password"]:visible').first();
@@ -204,26 +215,81 @@ export async function getTidToken(): Promise<string> {
 
     console.log('[Auth] Credentials submitted. URL:', page.url());
 
-    // Step 3: Google Authenticator MFA (may redirect to Okta for MFA or stay on Trimble)
-    const googleAuthLink = page.getByRole('link', { name: /google authenticator/i }).first();
-    await googleAuthLink.waitFor({ state: 'visible', timeout: 60000 });
-    await googleAuthLink.click();
+    // Take debug screenshot of MFA page
+    if (process.env.CI) {
+      await page.waitForTimeout(3000); // Wait for MFA page to fully render
+      await page.screenshot({ path: 'test-results/auth-step3-mfa-page.png', fullPage: true });
+    }
 
-    // Wait for TOTP code input
-    const codeInput = page.getByRole('textbox', { name: /enter code/i }).first();
-    await codeInput.waitFor({ state: 'visible', timeout: 15000 });
+    // Step 3: Google Authenticator MFA
+    // Try multiple selectors — Okta MFA UI varies between versions
+    const mfaSelectors = [
+      page.getByRole('link', { name: /google authenticator/i }).first(),
+      page.getByRole('button', { name: /google authenticator/i }).first(),
+      page.locator('[data-se="google_otp"]').first(),
+      page.locator('a:has-text("Google Authenticator")').first(),
+      page.locator('button:has-text("Google Authenticator")').first(),
+      page.locator('[data-se="okta_verify-totp"]').first(),
+      page.locator('a:has-text("Enter a code")').first(),
+      page.locator('button:has-text("Enter a code")').first(),
+      page.locator('[data-se="phone_number"]').first(),
+    ];
+
+    let mfaClicked = false;
+    for (const selector of mfaSelectors) {
+      if (await selector.isVisible({ timeout: 2000 }).catch(() => false)) {
+        console.log('[Auth] Found MFA option, clicking...');
+        await selector.click();
+        mfaClicked = true;
+        break;
+      }
+    }
+
+    if (!mfaClicked) {
+      // Maybe TOTP input is already visible (no MFA selection needed)
+      const directCodeInput = page.locator('input[type="tel"], input[name="credentials.passcode"], input[name="passcode"], input[name="answer"]').first();
+      if (await directCodeInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+        console.log('[Auth] TOTP input already visible, no MFA selection needed');
+      } else {
+        console.log('[Auth] No MFA option found. Page title:', await page.title());
+        await page.screenshot({ path: 'test-results/auth-mfa-not-found.png', fullPage: true });
+        throw new Error(`MFA option not found. URL: ${page.url()}`);
+      }
+    }
+
+    // Wait for TOTP code input — try multiple possible selectors
+    const codeInput = page.locator(
+      'input[name="credentials.passcode"], input[name="passcode"], input[name="answer"], input[type="tel"]'
+    ).first();
+    const codeInputAlt = page.getByRole('textbox', { name: /enter code|verification code|code/i }).first();
+
+    let targetCodeInput = codeInput;
+    if (await codeInput.isVisible({ timeout: 10000 }).catch(() => false)) {
+      targetCodeInput = codeInput;
+    } else if (await codeInputAlt.isVisible({ timeout: 5000 }).catch(() => false)) {
+      targetCodeInput = codeInputAlt;
+    } else {
+      await page.screenshot({ path: 'test-results/auth-totp-input-not-found.png', fullPage: true });
+      throw new Error(`TOTP input not found. URL: ${page.url()}`);
+    }
 
     // Generate and fill TOTP
     const totp = generateTotp();
-    await codeInput.fill(totp);
+    console.log('[Auth] Entering TOTP code');
+    await targetCodeInput.fill(totp);
 
     // Click Verify
-    const verifyButton = page.getByRole('button', { name: /verify/i }).first();
+    const verifyButton = page.locator('button[type="submit"], input[type="submit"]').first();
+    const verifyAlt = page.getByRole('button', { name: /verify|submit|sign in/i }).first();
     if (await verifyButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await verifyButton.click();
+    } else if (await verifyAlt.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await verifyAlt.click();
     } else {
-      await page.locator('button[type="submit"], input[type="submit"]').first().click();
+      await page.keyboard.press('Enter');
     }
+
+    console.log('[Auth] TOTP submitted, waiting for redirect...');
 
     // Wait for redirect to Postman callback with token
     await page.waitForURL(`${redirectUri}**`, { timeout: 120000 });
