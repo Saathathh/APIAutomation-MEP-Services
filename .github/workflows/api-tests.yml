@@ -1,11 +1,9 @@
-#MEP Services API tests
 name: API Tests
 
 on:
   push:
-    branches: [master]
   pull_request:
-    branches: [master, main]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
