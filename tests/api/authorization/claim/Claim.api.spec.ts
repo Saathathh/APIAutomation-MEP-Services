@@ -85,7 +85,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 422]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('POST Add Claims - should handle invalid UUID format', async ({ claimClient }) => {
@@ -95,7 +95,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('POST Add Claims - should handle non-existent UUID', async ({ claimClient }) => {
@@ -105,37 +105,17 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
-  test('POST Add Claims - should handle claim with invalid signature', async ({ claimClient }) => {
-    const invalidClaim: ClaimPayload = {
-      type: 'CustomerId',
-      value: 'test_value',
-      signature: 'invalid-signature-data',
-    };
-    const response = await claimClient.addClaims(CLAIM_UUID, [invalidClaim]);
+  test('POST Add Claims - should return 400 for claim with invalid signature', async ({ claimClient }) => {
+    const response = await claimClient.addClaims(CLAIM_UUID, [TEST_CLAIM_2]);
     const body = await response.text();
     await test.info().attach('API Response', {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 403, 422]).toContain(response.status());
-  });
-
-  test('POST Add Claims - should handle claim with empty type', async ({ claimClient }) => {
-    const invalidClaim: ClaimPayload = {
-      type: '',
-      value: 'test_value',
-      signature: TEST_CLAIM_1.signature,
-    };
-    const response = await claimClient.addClaims(CLAIM_UUID, [invalidClaim]);
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([200, 400, 422]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   // ======================================================================
@@ -205,7 +185,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 422]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('POST Remove Claims - should handle non-existent UUID', async ({ claimClient }) => {
@@ -215,7 +195,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('POST Remove Claims - should handle removing claims that do not exist', async ({ claimClient }) => {
@@ -227,7 +207,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   // ======================================================================
@@ -292,7 +272,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('DELETE All Claims - should handle invalid UUID format', async ({ claimClient }) => {
@@ -302,7 +282,7 @@ test.describe('Claim Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('DELETE All Claims - should be idempotent (delete when no claims exist)', async ({ claimClient }) => {

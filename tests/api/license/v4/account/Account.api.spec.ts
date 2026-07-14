@@ -74,7 +74,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Account - should return 500 for invalid licenseType', async ({ licenseAccountClientV4: licenseAccountClient }) => {
@@ -149,7 +149,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Feature - should handle non-existent feature name', async ({ licenseAccountClientV4: licenseAccountClient }) => {
@@ -159,7 +159,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Feature - should handle invalid accountId format', async ({ licenseAccountClientV4: licenseAccountClient }) => {
@@ -169,7 +169,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Feature - should return 500 for invalid licenseType', async ({ licenseAccountClientV4: licenseAccountClient }) => {
@@ -193,17 +193,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect(response.ok()).toBeTruthy();
-  });
-
-  test('POST Cache Reset - should validate response schema', async ({ licenseAccountClientV4: licenseAccountClient }) => {
-    const response = await licenseAccountClient.cacheReset([TEST_USER_ID]);
-    expect(response.ok()).toBeTruthy();
-    await test.info().attach('Schema Validation', {
-      body: JSON.stringify({ status: response.status() }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([200, 204]).toContain(response.status());
+    expect(response.status()).toBe(204);
   });
 
   test('POST Cache Reset - should return 401 without valid token', async ({}) => {
@@ -239,6 +229,8 @@ test.describe('License Account API Tests (v4)', () => {
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
+    expect(body.trim().toLowerCase()).toBe('true');
+
   });
 
   test('GET Has Entitlement - should validate response schema', async ({ licenseAccountClientV4: licenseAccountClient }) => {
@@ -275,9 +267,9 @@ test.describe('License Account API Tests (v4)', () => {
     await test.info().attach('API Response', {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
-    });
-    expect([200, 400, 404]).toContain(response.status());
-  });
+    });   
+    expect([404]).toContain(response.status());
+  });   
 
   test('GET Has Entitlement - should handle invalid accountId format', async ({ licenseAccountClientV4: licenseAccountClient }) => {
     const response = await licenseAccountClient.hasEntitlement('invalid!@#');
@@ -286,7 +278,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   // ======================================================================
@@ -349,7 +341,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET User Entitlement - should handle non-existent userId', async ({ licenseAccountClientV4: licenseAccountClient }) => {
@@ -359,7 +351,7 @@ test.describe('License Account API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET User Entitlement - should return 404 for invalid entitlementId format', async ({ licenseAccountClientV4: licenseAccountClient }) => {

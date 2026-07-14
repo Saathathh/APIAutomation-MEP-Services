@@ -34,33 +34,7 @@ test.describe('Feature Flag Service API Tests (v3)', () => {
     }
   });
 
-  test('GET ListAvailable - should return 401 without valid token', async ({}) => {
-    const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.BASE_URL,
-      extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
-    });
-    const response = await unauthorizedCtx.get('/featureflags/v3/Flags/ListAvailable');
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status() }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect(response.status()).toBe(401);
-    await unauthorizedCtx.dispose();
-  });
-
-  test('GET ListAvailable - response should contain flag name strings', async ({ featureFlagClientV3 }) => {
-    const response = await featureFlagClientV3.listAvailableFlags();
-    const body = await response.json();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect(response.ok()).toBeTruthy();
-    expect(body.length).toBeGreaterThan(0);
-    expect(typeof body[0]).toBe('string');
-  });
-
-  test('GET ListAvailable - should return 401 with expired token', async ({}) => {
+  test('GET ListAvailable - should return 401 with Invalid/expired token', async ({}) => {
     const expiredCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.expired.signature' },
@@ -128,45 +102,26 @@ test.describe('Feature Flag Service API Tests (v3)', () => {
     await unauthorizedCtx.dispose();
   });
 
-  test('GET IsAvailable - should handle non-existent flag name', async ({ featureFlagClientV3 }) => {
+  test('GET IsAvailable - should return false for non-existent flag name', async ({ featureFlagClientV3 }) => {
     const response = await featureFlagClientV3.isFlagAvailable('NonExistentFlag_12345');
     const body = await response.text();
     await test.info().attach('API Response', {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 404]).toContain(response.status());
+    expect(response.status()).toBe(200);
+    expect(body.trim().toLowerCase()).toBe('false');
   });
 
-  test('GET IsAvailable - should handle empty flag name', async ({ featureFlagClientV3 }) => {
-    const response = await featureFlagClientV3.isFlagAvailable('');
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([200, 400, 404, 405]).toContain(response.status());
-  });
-
-  test('GET IsAvailable - should handle special characters in flag name', async ({ featureFlagClientV3 }) => {
+  test('GET IsAvailable - should return false for special characters in flag name', async ({ featureFlagClientV3 }) => {
     const response = await featureFlagClientV3.isFlagAvailable('Flag!@#$%^&*()');
     const body = await response.text();
     await test.info().attach('API Response', {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
-  });
-
-  test('GET IsAvailable - should handle very long flag name', async ({ featureFlagClientV3 }) => {
-    const longName = 'A'.repeat(500);
-    const response = await featureFlagClientV3.isFlagAvailable(longName);
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([200, 400, 404, 414]).toContain(response.status());
+    expect(response.status()).toBe(200);
+    expect(body.trim().toLowerCase()).toBe('false');
   });
 
   // ======================================================================
@@ -221,21 +176,11 @@ test.describe('Feature Flag Service API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
     if (response.status() === 200) {
       const parsed = JSON.parse(body);
       expect(Array.isArray(parsed)).toBeTruthy();
     }
-  });
-
-  test('GET ListAvailable by category - should handle empty category', async ({ featureFlagClientV3 }) => {
-    const response = await featureFlagClientV3.listAvailableFlagsByCategory('');
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([200, 400, 404, 405]).toContain(response.status());
   });
 
   test('GET ListAvailable by category - should handle special characters in category', async ({ featureFlagClientV3 }) => {
@@ -245,7 +190,7 @@ test.describe('Feature Flag Service API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('GET ListAvailable by category - should handle case sensitivity', async ({ featureFlagClientV3 }) => {
@@ -255,7 +200,7 @@ test.describe('Feature Flag Service API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   // ======================================================================

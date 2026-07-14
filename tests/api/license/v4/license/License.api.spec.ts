@@ -168,7 +168,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([404, 400]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Feature - should return error for non-existent feature name', async ({ licenseClientV4: licenseClient }) => {
@@ -178,7 +178,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([404, 400]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   // ======================================================================
@@ -251,7 +251,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([404, 400]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
 
@@ -366,7 +366,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 422, 500]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   test('POST Create License - should fail with missing accountId', async ({ licenseClientV4: licenseClient }) => {
@@ -383,7 +383,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 422, 500]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   test('POST Create License - should fail with missing coreFeature', async ({ licenseClientV4: licenseClient }) => {
@@ -400,7 +400,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 422, 500]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   test('POST Create License - should succeed even with missing sku (optional field)', async ({ licenseClientV4: licenseClient }) => {
@@ -451,7 +451,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 422, 500]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   test('POST Create License - should fail with invalid licenseType', async ({ licenseClientV4: licenseClient }) => {
@@ -469,7 +469,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 422, 500]).toContain(response.status());
+    expect([500]).toContain(response.status());
   });
 
   test('POST Create License - should return 404 with invalid accountId', async ({ licenseClientV4: licenseClient }) => {
@@ -487,7 +487,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 404, 422, 500]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   // ======================================================================
@@ -622,7 +622,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 422, 500]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   test('PUT Refresh License Token - should return 200 with missing oldAccessToken (optional field)', async ({ licenseClientV4: licenseClient }) => {
@@ -642,7 +642,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 404, 500]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('PUT Refresh License Token - should return 200 with invalid oldAccessToken (token ignored)', async ({ licenseClientV4: licenseClient }) => {
@@ -756,7 +756,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 404, 500]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('PUT Renew License - should fail with empty licenseId', async ({ licenseClientV4: licenseClient }) => {
@@ -766,7 +766,7 @@ test.describe('License API Tests (v4)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 404, 500]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   // ======================================================================

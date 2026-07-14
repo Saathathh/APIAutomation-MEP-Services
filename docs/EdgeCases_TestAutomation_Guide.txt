@@ -1,0 +1,82 @@
+================================================================================
+EDGE CASES - API TEST AUTOMATION GUIDE
+================================================================================
+
+Last Updated: 2026-07-14
+Spec File: tests/api/edgeCases.api.spec.ts
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+This suite validates security and resilience behavior across services using
+malformed, malicious, and stress-style inputs.
+
+Total Edge Case Tests: 28
+
+================================================================================
+2. ENDPOINTS COVERED
+================================================================================
+
+Unique endpoints covered: 18
+
+Authentication-related endpoints
+1. POST /authentications/Authentication/customer/{customerId}
+2. GET /authentications/User/{uuid}
+3. GET /authentications/User/email/{email}
+4. POST /authentications/User
+5. PUT /authentications/Product
+6. GET /authentications/Product/{id}
+
+License-related endpoints
+7. GET /licenses/License/{customerId}/product/{sku}
+8. POST /licenses/License
+9. GET /licenses/License/{licenseId}/feature/{featureName}
+10. GET /licenses/Customer/{customerId}/products
+11. GET /licenses/v1/user/{email}
+
+Authorization-related endpoints
+12. POST /authorizations/Claim/add/{uuid}
+13. DELETE /authorizations/Claim/{uuid}
+14. POST /authorizations/Role/{uuid}
+15. GET /authorizations/Role/{uuid}
+
+Feature flag endpoints
+16. GET /featureflags/v3/Flags/IsAvailable/{flagName}
+17. GET /featureflags/v3/Flags/ListAvailable/{category}
+18. GET /featureflags/v3/Flags/ListAvailable (token handling target)
+
+================================================================================
+3. TEST CATEGORY SUMMARY
+================================================================================
+
+- SQL injection checks
+- XSS payload checks
+- Path traversal checks
+- Oversized input checks
+- Malformed UUID and parameter checks
+- Authorization header and token format checks
+- Concurrent request behavior checks
+
+================================================================================
+4. KNOWN BEHAVIOR NOTES
+================================================================================
+
+- Known XSS reflection behavior remains documented for POST /User.
+- Some endpoints return success-style fallback values for invalid strings
+  (for example boolean false or 204) instead of hard validation errors.
+- These behaviors are covered by assertions so they remain visible in reports.
+
+================================================================================
+5. HOW TO RUN
+================================================================================
+
+Run all edge case tests:
+  npx playwright test tests/api/edgeCases.api.spec.ts --project=api
+
+Run by keyword:
+  npx playwright test tests/api/edgeCases.api.spec.ts --project=api -g "Token"
+
+================================================================================
+END OF DOCUMENT
+================================================================================

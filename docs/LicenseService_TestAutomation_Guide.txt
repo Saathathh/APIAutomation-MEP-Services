@@ -1,8 +1,8 @@
 ================================================================================
-          LICENSE SERVICE - API TEST AUTOMATION GUIDE
+LICENSE SERVICE - API TEST AUTOMATION GUIDE
 ================================================================================
 
-Created: 2026-06-10
+Last Updated: 2026-07-14
 Framework: Playwright (TypeScript)
 Location: c:\APIAutomation
 
@@ -10,494 +10,95 @@ Location: c:\APIAutomation
 1. SERVICE OVERVIEW
 ================================================================================
 
-The License Service provides a REST API for managing software licenses, accounts,
-entitlements, and customer data. It supports multiple API versions (v1, v3, v4)
-with different capabilities per version.
+License Service coverage is implemented for v1, v3, and v4 APIs under:
+tests/api/license/
 
-Authentication: OAuth2 Bearer Token (required for all endpoints)
-Base URL: Configured via BASE_URL environment variable
-API Versions: 1.0, 3.0, 4.0 (passed as query param: ?api-version=X.0)
-
-The service is composed of 3 sub-services:
-  - License Controller: CRUD operations on licenses
-  - Account Controller: Account-level queries, features, entitlements, cache
-  - Customer Controller: Customer/user management (v1 only)
+Areas covered:
+- License endpoints (v1, v3, v4)
+- Account endpoints (v3, v4)
+- Customer endpoints (v1)
 
 ================================================================================
-2. ENDPOINTS (17 Total across all versions)
+2. CURRENT SPEC FILES AND TEST COUNTS
 ================================================================================
 
-+==============================================================================+
-| LICENSE CONTROLLER (/licenses/License)                                       |
-+-----+-------+---------------------------------------------------+-----------+
-| #   | Method| Endpoint                                          | Versions  |
-+-----+-------+---------------------------------------------------+-----------+
-| 1   | GET   | /licenses/v{ver}/License/account/{accountId}      | v3, v4    |
-|     |       | → Get all licenses for an account                 |           |
-| 2   | GET   | /License/{licenseId}/feature/{featureName}         | v3, v4    |
-|     |       | → Get feature details for a license               |           |
-| 3   | GET   | /License/{licenseId}                              | v1,v3,v4  |
-|     |       | → Get license details (v3/v4) or check validity   |           |
-| 4   | POST  | /License                                          | v3, v4    |
-|     |       | → Create a new license                            |           |
-| 5   | DELETE| /License/{licenseId}                              | v1,v3,v4  |
-|     |       | → Delete/release a license                        |           |
-| 6   | PUT   | /License/updateToken                              | v3, v4    |
-|     |       | → Refresh license token                           |           |
-| 7   | PUT   | /License/renew                                    | v3, v4    |
-|     |       | → Renew an existing license                       |           |
-| 8   | GET   | /License/{customerId}/product/{sku}               | v1        |
-|     |       | → Request a license for a user                    |           |
-| 9   | POST  | /License/{licenseId}                              | v1        |
-|     |       | → Refresh an existing license                     |           |
-+-----+-------+---------------------------------------------------+-----------+
+- tests/api/license/v4/account/Account.api.spec.ts -> 27 tests
+- tests/api/license/v4/license/License.api.spec.ts -> 40 tests
+- tests/api/license/v3/account/Account.api.spec.ts -> 15 tests
+- tests/api/license/v3/license/License.api.spec.ts -> 40 tests
+- tests/api/license/v1/customer/Customer.api.spec.ts -> 16 tests
+- tests/api/license/v1/license/License.api.spec.ts -> 18 tests
 
-+==============================================================================+
-| ACCOUNT CONTROLLER (/licenses/Account)                                       |
-+-----+-------+---------------------------------------------------+-----------+
-| #   | Method| Endpoint                                          | Versions  |
-+-----+-------+---------------------------------------------------+-----------+
-| 10  | GET   | /Account?feature={f}&licenseType={t}              | v3, v4    |
-|     |       | → Get accounts by feature & license type          |           |
-| 11  | GET   | /Account/{accountId}/feature/{featureName}        | v3, v4    |
-|     |       | → Get feature details for an account              |           |
-| 12  | POST  | /Account/cache/reset                              | v3, v4    |
-|     |       | → Reset cache for specified user IDs              |           |
-| 13  | GET   | /Account/entitlements/{accountId}                 | v4        |
-|     |       | → Check if account has entitlements               |           |
-| 14  | GET   | /Account/entitlements/{entitlementId}/users/       | v4        |
-|     |       | {userId} → Get user entitlement details           |           |
-+-----+-------+---------------------------------------------------+-----------+
-
-+==============================================================================+
-| CUSTOMER CONTROLLER (/licenses/Customer & /licenses/v1/user)                 |
-+-----+-------+---------------------------------------------------+-----------+
-| #   | Method| Endpoint                                          | Versions  |
-+-----+-------+---------------------------------------------------+-----------+
-| 15  | GET   | /licenses/v1/user/{email}                         | v1        |
-|     |       | → Get user by email                               |           |
-| 16  | GET   | /Customer/listall                                 | v1        |
-|     |       | → List all customers                              |           |
-| 17  | GET   | /Customer/list                                    | v1        |
-|     |       | → List customers (filtered)                       |           |
-| 18  | GET   | /Customer/{customerId}/products                   | v1        |
-|     |       | → Get products for a customer                     |           |
-+-----+-------+---------------------------------------------------+-----------+
+Total License Service Tests: 156
 
 ================================================================================
-3. ENDPOINT DETAILS
+3. ENDPOINT COVERAGE SUMMARY
 ================================================================================
 
---------------------------------------------------------------------------------
-LICENSE ENDPOINTS (v3/v4)
---------------------------------------------------------------------------------
+v4 Account
+- GET /licenses/Account
+- GET /licenses/Account/{accountId}/feature/{featureName}
+- POST /licenses/Account/cache/reset
+- GET /licenses/Account/entitlements/{accountId}
+- GET /licenses/Account/entitlements/{entitlementId}/users/{userId}
+Coverage includes happy path, schema validation, auth failures, invalid IDs,
+non-existent resources, invalid licenseType behavior, and E2E flow.
 
-ENDPOINT 1: GET /licenses/v{ver}/License/account/{accountId}
-  - Response 200: Array of license objects
-    [{ accountId, licenseId, deviceId, coreFeature, ... }]
-  - Non-existent account: Returns 200 with empty array []
+v4 License
+- GET /licenses/v4/License/account/{accountId}
+- GET /licenses/License/{licenseId}/feature/{featureName}
+- GET /licenses/License/{licenseId}
+- POST /licenses/License
+- DELETE /licenses/License/{licenseId}
+- PUT /licenses/License/updateToken
+- PUT /licenses/License/renew
+Coverage includes happy path, schema validation, auth failures, empty body,
+missing fields, invalid identifiers, idempotent delete, renew and token refresh,
+plus E2E create/delete flow.
 
-ENDPOINT 2: GET /licenses/License/{licenseId}/feature/{featureName}?api-version=X
-  - Query Params: getUsagePlan (boolean, default false)
-  - Response 200: { accountId, featureId, startDate, endDate, limit, limitUnit }
-  - Error: 404 (non-existent license/feature)
+v3 Account
+- GET /licenses/Account
+- GET /licenses/Account/{accountId}/feature/{featureName}
+- POST /licenses/Account/cache/reset
+Coverage includes happy path, schema validation, auth failures, invalid IDs,
+invalid licenseType behavior, and E2E flow.
 
-ENDPOINT 3: GET /licenses/License/{licenseId}?api-version=X
-  - Response 200: { accountId, id, accountName, features[], sku, productName,
-                    emsVersion, ... }
-  - Error: 404 (non-existent license)
+v3 License
+- Same endpoint set and test strategy as v4 license.
 
-ENDPOINT 4: POST /licenses/License?api-version=X
-  - Request Body:
-    { accountId, coreFeature, deviceId, sku, licenseType, productName,
-      productVersion }
-  - Response 200: Created license object
-  - Error: 400/500 (missing required fields, invalid accountId)
+v1 Customer
+- GET /licenses/v1/user/{email}
+- GET /licenses/Customer/listall
+- GET /licenses/Customer/list
+- GET /licenses/Customer/{customerId}/products
+Coverage includes happy path, schema validation, auth failures, non-existent and
+invalid customer identifiers, plus E2E list flow.
 
-ENDPOINT 5: DELETE /licenses/License/{licenseId}?api-version=X
-  - Response: 200/204 (success, idempotent — returns 204 for non-existent)
-  - Error: 401 (unauthorized)
-
-ENDPOINT 6: PUT /licenses/License/updateToken?api-version=X
-  - Request Body: { licenseId, oldAccessToken }
-  - Response 200: License object with refreshed token
-  - Note: oldAccessToken is optional (ignored by server)
-  - Error: 400/500 (empty licenseId)
-
-ENDPOINT 7: PUT /licenses/License/renew?api-version=X
-  - Request Body: { licenseId }
-  - Response 200: Renewed license object
-  - Error: 400/404/500 (non-existent or empty licenseId)
-
---------------------------------------------------------------------------------
-LICENSE ENDPOINTS (v1)
---------------------------------------------------------------------------------
-
-ENDPOINT 8: GET /licenses/License/{customerId}/product/{sku}?api-version=1.0
-  - Response 200: { licenseId }
-  - Error: 500 (non-existent customer/sku)
-
-ENDPOINT 9: POST /licenses/License/{licenseId}?api-version=1.0
-  - Response 200: { licenseId, customerId, sku, ... }
-  - Error: 500 (non-existent license)
-
---------------------------------------------------------------------------------
-ACCOUNT ENDPOINTS (v3/v4)
---------------------------------------------------------------------------------
-
-ENDPOINT 10: GET /licenses/Account?feature=X&licenseType=Y&api-version=X
-  - Response 200: Array of account objects
-    [{ id, name, licenseType, sku, productName, features[] }]
-  - Error: 500 (invalid licenseType like 999)
-
-ENDPOINT 11: GET /licenses/Account/{accountId}/feature/{featureName}?licenseType=Y
-  - Response 200: { accountId, featureId, startDate, endDate, limit, limitUnit }
-  - Error: 500 (non-existent accountId)
-
-ENDPOINT 12: POST /licenses/Account/cache/reset?api-version=X
-  - Request Body: { userIds: ["uuid1", "uuid2"] }
-  - Response: 200/204 (success)
-
-ENDPOINT 13: GET /licenses/Account/entitlements/{accountId}?api-version=4.0
-  - Response 200: Boolean value ("true" or "false")
-
-ENDPOINT 14: GET /licenses/Account/entitlements/{entitlementId}/users/{userId}
-  - Response 200: { accountId, organisationName, userEmail, firstName,
-                    lastName, country }
-  - Error: 404 (invalid format for entitlementId or userId)
-
---------------------------------------------------------------------------------
-CUSTOMER ENDPOINTS (v1)
---------------------------------------------------------------------------------
-
-ENDPOINT 15: GET /licenses/v1/user/{email}
-  - Response 200: { uuid, firstName, lastName, email, isAdmin }
-  - Error: 204 (non-existent email)
-
-ENDPOINT 16: GET /licenses/Customer/listall?api-version=1.0
-  - Response 200: Array of customers [{ id, name, users[] }]
-
-ENDPOINT 17: GET /licenses/Customer/list?api-version=1.0
-  - Response 200: Array of customers [{ id, name, users[] }]
-
-ENDPOINT 18: GET /licenses/Customer/{customerId}/products?api-version=1.0
-  - Response 200: Array of product objects
+v1 License
+- GET /licenses/License/{customerId}/product/{sku}
+- GET /licenses/License/{licenseId}
+- POST /licenses/License/{licenseId}
+- DELETE /licenses/License/{licenseId}
+Coverage includes happy path, schema validation, auth failures, non-existent IDs,
+and end-to-end request/check/refresh/release lifecycle.
 
 ================================================================================
-4. HOW IT WORKS (Architecture)
+4. TEST DESIGN NOTES
 ================================================================================
 
-  STEP-BY-STEP: What happens when tests run
-  ──────────────────────────────────────────
-
-  Step 1: SETUP
-    - global-setup.ts checks that environment variables are set (.env file)
-    - ApiBaseTest.ts gets an OAuth2 token via TokenManager.ts
-    - Creates API clients: LicenseClient, LicenseAccountClient,
-      LicenseCustomerClient (for v1, v3, v4)
-
-  Step 2: LICENSE TESTS (v3/v4)
-    - GET    /License/account/{accountId}  → List all licenses for an account
-    - GET    /License/{licenseId}/feature/{featureName} → Get feature details
-    - GET    /License/{licenseId}          → Get license details
-    - POST   /License                      → Create a new license
-    - DELETE /License/{licenseId}          → Delete a license
-    - PUT    /License/updateToken          → Refresh the license token
-    - PUT    /License/renew               → Renew an existing license
-
-  Step 3: LICENSE TESTS (v1)
-    - GET    /License/{customerId}/product/{sku} → Request license for user
-    - GET    /License/{licenseId}               → Check license validity
-    - POST   /License/{licenseId}               → Refresh a license
-    - DELETE /License/{licenseId}               → Release a license
-
-  Step 4: ACCOUNT TESTS (v3/v4)
-    - GET  /Account?feature=X&licenseType=Y    → Get accounts by feature/type
-    - GET  /Account/{accountId}/feature/{name} → Get feature for an account
-    - POST /Account/cache/reset                → Reset cache for user IDs
-    - GET  /Account/entitlements/{accountId}   → Check entitlements (v4 only)
-    - GET  /Account/entitlements/{id}/users/{userId} → User entitlement (v4)
-
-  Step 5: CUSTOMER TESTS (v1)
-    - GET /v1/user/{email}                → Get user by email
-    - GET /Customer/listall               → List all customers
-    - GET /Customer/list                  → List customers (filtered)
-    - GET /Customer/{customerId}/products → Get products for a customer
-
-  CLEANUP: Create tests always delete the licenses they created afterward.
-
-  Key Files:
-  ──────────────────────────────────────────
-  api/auth/TokenManager.ts         → Gets and caches the OAuth2 token
-  api/clients/license/
-    LicenseClient.ts               → License CRUD + token + renew (8 methods)
-    LicenseAccountClient.ts        → Account queries + cache reset (5 methods)
-    LicenseCustomerClient.ts       → Customer/user lookup (4 methods)
-  utilities/ApiBaseTest.ts         → Sets up shared test fixtures
-  tests/api/license/
-    v4/account/Account.api.spec.ts → v4 Account tests
-    v4/license/License.api.spec.ts → v4 License tests
-    v3/account/Account.api.spec.ts → v3 Account tests
-    v3/license/License.api.spec.ts → v3 License tests
-    v1/customer/Customer.api.spec.ts → v1 Customer tests
-    v1/license/License.api.spec.ts → v1 License tests
+- Shared token setup uses api/auth/TokenManager.ts.
+- Shared fixtures come from utilities/ApiBaseTest.ts.
+- v3 and v4 license suites maintain parity for core behavior checks.
 
 ================================================================================
-5. TEST CASES COVERED
+5. HOW TO RUN
 ================================================================================
 
-Grand Total: ~130 test cases
+Run all license tests:
+  npx playwright test tests/api/license/
 
-──────────────────────────────────────────────────────────────────────────────
-v4 ACCOUNT (28 tests) - tests/api/license/v4/account/Account.api.spec.ts
-──────────────────────────────────────────────────────────────────────────────
-
-  GET /Account (5 tests):
-  #  | Test Case                                          | Type
-  ---+----------------------------------------------------+-------------------
-  1  | Should return 200 with valid feature & licenseType | Happy path
-  2  | Should validate response schema                    | Schema validation
-  3  | Should return 401 without valid token              | Security/Auth
-  4  | Should handle non-existent feature name            | Negative/Edge
-  5  | Should return 500 for invalid licenseType          | Negative/Edge
-
-  GET /Account/{accountId}/feature/{featureName} (7 tests):
-  #  | Test Case                                          | Type
-  ---+----------------------------------------------------+-------------------
-  6  | Should return 200 for valid account and feature    | Happy path
-  7  | Should validate response schema                    | Schema validation
-  8  | Should return 401 without valid token              | Security/Auth
-  9  | Should handle non-existent accountId               | Negative/Edge
-  10 | Should handle non-existent feature name            | Negative/Edge
-  11 | Should handle invalid accountId format             | Negative/Edge
-  12 | Should return 500 for invalid licenseType          | Negative/Edge
-
-  POST /Account/cache/reset (3 tests):
-  #  | Test Case                                          | Type
-  ---+----------------------------------------------------+-------------------
-  13 | Should return 200 with valid userIds               | Happy path
-  14 | Should validate response schema                    | Schema validation
-  15 | Should return 401 without valid token              | Security/Auth
-
-  GET /Account/entitlements/{accountId} (5 tests):
-  #  | Test Case                                          | Type
-  ---+----------------------------------------------------+-------------------
-  16 | Should return 200 for valid accountId              | Happy path
-  17 | Should validate response schema (boolean)          | Schema validation
-  18 | Should return 401 without valid token              | Security/Auth
-  19 | Should handle non-existent accountId               | Negative/Edge
-  20 | Should handle invalid accountId format             | Negative/Edge
-
-  GET /Account/entitlements/{entitlementId}/users/{userId} (7 tests):
-  #  | Test Case                                          | Type
-  ---+----------------------------------------------------+-------------------
-  21 | Should return 200 for valid entitlement and user   | Happy path
-  22 | Should validate response schema                    | Schema validation
-  23 | Should return 401 without valid token              | Security/Auth
-  24 | Should handle non-existent entitlementId           | Negative/Edge
-  25 | Should handle non-existent userId                  | Negative/Edge
-  26 | Should return 404 for invalid entitlementId format | Negative/Edge
-  27 | Should return 404 for invalid userId format        | Negative/Edge
-
-  E2E Flow (1 test):
-  28 | Get account → Get feature → Cache reset →          | Integration
-     | Has entitlement → Get user entitlement             |
-
-──────────────────────────────────────────────────────────────────────────────
-v4 LICENSE (30 tests) - tests/api/license/v4/license/License.api.spec.ts
-──────────────────────────────────────────────────────────────────────────────
-
-  GET /licenses/v4/License/account/{accountId} (5 tests):
-  1-5 | Happy path, schema, auth, non-existent, invalid format
-
-  GET /License/{licenseId}/feature/{featureName} (5 tests):
-  6-10 | Happy path, schema, auth, non-existent license, non-existent feature
-
-  GET /License/{licenseId} (4 tests):
-  11-14 | Happy path, schema, auth, non-existent license
-
-  POST /License - Create (9 tests):
-  15-23 | Happy path (with verify), schema, auth, empty body, missing
-        | accountId, missing coreFeature, missing sku (optional - succeeds),
-        | missing deviceId, invalid licenseType, invalid accountId
-
-  DELETE /License/{licenseId} (3 tests):
-  24-26 | Create-then-delete, auth, idempotent (204 for non-existent)
-
-  PUT /License/updateToken (7 tests):
-  27-33 | Happy path, schema, auth, empty licenseId, empty oldAccessToken
-        | (succeeds), non-existent license, invalid token (succeeds)
-
-  PUT /License/renew (4 tests):
-  34-37 | Happy path, schema, auth, non-existent license, empty license
-
-  E2E Flow (1 test):
-  38 | Get account license → Get license → Get feature → Create → Delete
-
-──────────────────────────────────────────────────────────────────────────────
-v3 ACCOUNT (14 tests) - tests/api/license/v3/account/Account.api.spec.ts
-──────────────────────────────────────────────────────────────────────────────
-
-  GET /Account (5 tests):
-  1-5 | Same structure as v4
-
-  GET /Account/{accountId}/feature/{featureName} (7 tests):
-  6-12 | Same structure as v4
-
-  POST /Account/cache/reset (3 tests):
-  13-15 | Same structure as v4
-
-  NOTE: v3 Account does NOT have entitlement endpoints (v4-only)
-
-  E2E Flow (1 test):
-  16 | Get account → Get feature → Cache reset
-
-──────────────────────────────────────────────────────────────────────────────
-v3 LICENSE (30 tests) - tests/api/license/v3/license/License.api.spec.ts
-──────────────────────────────────────────────────────────────────────────────
-
-  Same structure as v4 License tests (all 30 tests mirrored for v3 API)
-
-──────────────────────────────────────────────────────────────────────────────
-v1 CUSTOMER (16 tests) - tests/api/license/v1/customer/Customer.api.spec.ts
-──────────────────────────────────────────────────────────────────────────────
-
-  GET /licenses/v1/user/{email} (4 tests):
-  #  | Test Case                                          | Type
-  ---+----------------------------------------------------+-------------------
-  1  | Should return 200 for valid email                  | Happy path
-  2  | Should validate response schema                    | Schema validation
-  3  | Should return 401 without valid token              | Security/Auth
-  4  | Should return 204 for non-existent email           | Negative/Edge
-
-  GET /Customer/listall (3 tests):
-  5  | Should return 200                                  | Happy path
-  6  | Should validate response schema                    | Schema validation
-  7  | Should return 401 without valid token              | Security/Auth
-
-  GET /Customer/list (3 tests):
-  8  | Should return 200                                  | Happy path
-  9  | Should validate response schema                    | Schema validation
-  10 | Should return 401 without valid token              | Security/Auth
-
-  GET /Customer/{customerId}/products (5 tests):
-  11 | Should return 200 for valid customerId             | Happy path
-  12 | Should validate response schema                    | Schema validation
-  13 | Should return 401 without valid token              | Security/Auth
-  14 | Should handle non-existent customerId              | Negative/Edge
-  15 | Should handle invalid customerId format            | Negative/Edge
-
-  E2E Flow (1 test):
-  16 | Get user by email → List all → List customers      | Integration
-
-──────────────────────────────────────────────────────────────────────────────
-v1 LICENSE (18 tests) - tests/api/license/v1/license/License.api.spec.ts
-──────────────────────────────────────────────────────────────────────────────
-
-  GET /License/{customerId}/product/{sku} - Request License (5 tests):
-  #  | Test Case                                          | Type
-  ---+----------------------------------------------------+-------------------
-  1  | Should return 200 for valid customerId and sku     | Happy path
-  2  | Should validate response schema                    | Schema validation
-  3  | Should return 401 without valid token              | Security/Auth
-  4  | Should return 500 for non-existent customerId      | Negative/Edge
-  5  | Should return 500 for non-existent sku             | Negative/Edge
-
-  GET /License/{licenseId} - Check License (4 tests):
-  6  | Should return 204 for valid licenseId              | Happy path
-  7  | Should validate response schema                    | Schema validation
-  8  | Should return 401 without valid token              | Security/Auth
-  9  | Should handle non-existent licenseId               | Negative/Edge
-
-  POST /License/{licenseId} - Refresh License (4 tests):
-  10 | Should return 200 for valid licenseId              | Happy path
-  11 | Should validate response schema                    | Schema validation
-  12 | Should return 401 without valid token              | Security/Auth
-  13 | Should return 500 for non-existent licenseId       | Negative/Edge
-
-  DELETE /License/{licenseId} - Release License (5 tests):
-  14 | Should return 200 for valid licenseId              | Happy path
-  15 | Should validate response schema                    | Schema validation
-  16 | Should return 401 without valid token              | Security/Auth
-  17 | Should handle non-existent licenseId               | Negative/Edge
-  18 | Should handle already released licenseId           | Negative/Edge
-
-  E2E Flow - License Lifecycle (4 tests, serial):
-  19 | Step 1: Request a license                          | E2E
-  20 | Step 2: Check license exists and is valid          | E2E
-  21 | Step 3: Refresh the license                        | E2E
-  22 | Step 4: Release the license                        | E2E
-
-================================================================================
-6. TEST COVERAGE SUMMARY
-================================================================================
-
-  Category                   | Covered?  | Details
-  ───────────────────────────+───────────+────────────────────────────────────
-  Happy Path (200/204 OK)    | YES       | All endpoints across all versions
-  Schema Validation          | YES       | Response object structure verified
-  Authentication (401)       | YES       | Invalid/missing token on every endpoint
-  Edge Cases                 | YES       | Empty body, missing fields, invalid
-                             |           | formats, invalid types
-  Non-existent Resources     | YES       | Unknown IDs → 404/204/500/empty array
-  Create + Verify + Delete   | YES       | License CRUD lifecycle tested
-  Idempotent Delete          | YES       | DELETE returns 204 for non-existent
-  Token Refresh              | YES       | updateToken with valid/invalid tokens
-  License Renewal            | YES       | Create → Renew → verify schema
-  End-to-End Flows           | YES       | Full user journeys per controller
-  Multi-Version Parity       | YES       | Same tests run against v3 and v4
-  Optional Fields            | YES       | SKU tested as optional (still 200)
-  Server Error Cases         | YES       | Invalid licenseType → 500
-
-================================================================================
-7. PROJECT STRUCTURE (Relevant to License)
-================================================================================
-
-  c:\APIAutomation\
-  ├── api/
-  │   ├── auth/
-  │   │   └── TokenManager.ts                 # OAuth2 token management
-  │   └── clients/
-  │       └── license/
-  │           ├── LicenseClient.ts            # License endpoints (8 methods)
-  │           ├── LicenseAccountClient.ts     # Account endpoints (5 methods)
-  │           └── LicenseCustomerClient.ts    # Customer endpoints (4 methods)
-  ├── tests/
-  │   └── api/
-  │       └── license/
-  │           ├── v4/
-  │           │   ├── account/
-  │           │   │   └── Account.api.spec.ts # 28 tests
-  │           │   └── license/
-  │           │       └── License.api.spec.ts # 30 tests
-  │           ├── v3/
-  │           │   ├── account/
-  │           │   │   └── Account.api.spec.ts # 14 tests (+1 E2E)
-  │           │   └── license/
-  │           │       └── License.api.spec.ts # 30 tests
-  │           └── v1/
-  │               ├── customer/
-  │               │   └── Customer.api.spec.ts # 16 tests
-  │               └── license/
-  │                   └── License.api.spec.ts  # 18 tests (+4 E2E serial)
-  └── utilities/
-      └── ApiBaseTest.ts                      # Shared fixtures
-
-================================================================================
-8. TROUBLESHOOTING
-================================================================================
-
-  Problem                            | Solution
-  ───────────────────────────────────+──────────────────────────────────────
-  401 on all license calls           | Check .env token credentials
-  500 on GET Account                 | Likely invalid licenseType (use 1)
-  500 on v1 Request License          | Customer/SKU doesn't exist
-  404 on GET Feature                 | License ID or feature name invalid
-  204 on DELETE (unexpected)         | License already deleted (idempotent)
-  Create tests leave orphan licenses | Check cleanup (delete) at end of test
-  Empty array on GET account license | AccountId not found (returns 200 + [])
-
-  NOTE: For prerequisites and general setup, refer to README.md
+Run one spec file:
+  npx playwright test tests/api/license/v4/license/License.api.spec.ts
 
 ================================================================================
 END OF DOCUMENT

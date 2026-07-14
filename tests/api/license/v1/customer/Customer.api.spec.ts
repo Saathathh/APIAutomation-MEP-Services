@@ -230,7 +230,7 @@ test.describe('License Customer API Tests (v1)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 204, 404]).toContain(response.status());
+    expect([200, 204]).toContain(response.status());
   });
 
   test('GET Customer Products - should handle invalid customerId format', async ({ licenseCustomerClient }) => {
@@ -240,7 +240,7 @@ test.describe('License Customer API Tests (v1)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 204, 400, 404]).toContain(response.status());
+    expect([200, 204]).toContain(response.status());
   });
 
   // ======================================================================

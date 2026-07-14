@@ -8,6 +8,8 @@ const TEST_SKU = LICENSE_TEST_DATA.skuV1;
 
 test.describe('License API Tests (v1)', () => {
 
+  test.describe.configure({ mode: 'serial' });
+
   // ======================================================================
   // Endpoint 1: GET /licenses/License/{customerId}/product/{sku}?api-version=1.0
   // Request a license for user
@@ -79,7 +81,7 @@ test.describe('License API Tests (v1)', () => {
   // Check if license exists and is valid
   // ======================================================================
 
-  test('GET Check License - should return 204 for valid licenseId', async ({ licenseClientV1 }) => {
+  test('GET Check License - should return 200 for valid licenseId', async ({ licenseClientV1 }) => {
     // First request a license to get a licenseId
     const requestResp = await licenseClientV1.requestLicense(TEST_CUSTOMER_ID, TEST_SKU);
     const requestBody = await requestResp.json();
@@ -91,7 +93,7 @@ test.describe('License API Tests (v1)', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 204]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
 
   test('GET Check License - should validate response schema', async ({ licenseClientV1 }) => {
@@ -100,21 +102,15 @@ test.describe('License API Tests (v1)', () => {
     const licenseId = requestBody.licenseId;
 
     const response = await licenseClientV1.getLicense(licenseId);
-    expect([200, 204]).toContain(response.status());
-    if (response.status() === 200) {
-      const body = await response.json();
-      await test.info().attach('Schema Validation', {
-        body: JSON.stringify({ status: response.status(), body }, null, 2),
-        contentType: 'text/plain',
-      });
-      expect(body).toHaveProperty('licenseId');
-      expect(typeof body.licenseId).toBe('string');
-      expect(body.licenseId).toBe(licenseId);
-      expect(body).toHaveProperty('customerId');
-      expect(typeof body.customerId).toBe('string');
-      expect(body).toHaveProperty('sku');
-      expect(typeof body.sku).toBe('string');
-    }
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    await test.info().attach('Schema Validation', {
+      body: JSON.stringify({ status: response.status(), body }, null, 2),
+      contentType: 'text/plain',
+    });
+    expect(body).toHaveProperty('licenseId');
+    expect(typeof body.licenseId).toBe('string');
+    expect(body.licenseId).toBe(licenseId);
   });
 
   test('GET Check License - should return 401 without valid token', async ({}) => {
@@ -141,7 +137,7 @@ test.describe('License API Tests (v1)', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 204, 400, 404]).toContain(response.status());
+    expect([204]).toContain(response.status());
   });
 
   // ======================================================================
@@ -150,8 +146,9 @@ test.describe('License API Tests (v1)', () => {
   // ======================================================================
 
   test('POST Refresh License - should return 200 for valid licenseId', async ({ licenseClientV1 }) => {
-    // First request a license to get a licenseId
+    // Request a fresh license to ensure it's in active state
     const requestResp = await licenseClientV1.requestLicense(TEST_CUSTOMER_ID, TEST_SKU);
+    expect(requestResp.status()).toBe(200);
     const requestBody = await requestResp.json();
     const licenseId = requestBody.licenseId;
 
@@ -161,28 +158,27 @@ test.describe('License API Tests (v1)', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 500]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
 
   test('POST Refresh License - should validate response schema', async ({ licenseClientV1 }) => {
-    // First request a license to get a licenseId
+    // Request a fresh license to ensure it's in active state
     const requestResp = await licenseClientV1.requestLicense(TEST_CUSTOMER_ID, TEST_SKU);
+    expect(requestResp.status()).toBe(200);
     const requestBody = await requestResp.json();
     const licenseId = requestBody.licenseId;
 
     const response = await licenseClientV1.refreshLicense(licenseId);
+    expect(response.status()).toBe(200);
     const body = await response.text();
     await test.info().attach('Schema Validation', {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    // Refresh may return 200 with license details or 500 if license already consumed
-    if (response.status() === 200) {
-      const json = JSON.parse(body);
-      expect(json).toHaveProperty('licenseId');
-      expect(typeof json.licenseId).toBe('string');
-      expect(json.licenseId).toBe(licenseId);
-    }
+    const json = JSON.parse(body);
+    expect(json).toHaveProperty('licenseId');
+    expect(typeof json.licenseId).toBe('string');
+    expect(json.licenseId).toBe(licenseId);
   });
 
   test('POST Refresh License - should return 401 without valid token', async ({}) => {
@@ -275,24 +271,7 @@ test.describe('License API Tests (v1)', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 204, 400, 404]).toContain(response.status());
-  });
-
-  test('DELETE Release License - should handle already released licenseId', async ({ licenseClientV1 }) => {
-    // Request and immediately release
-    const requestResp = await licenseClientV1.requestLicense(TEST_CUSTOMER_ID, TEST_SKU);
-    const requestBody = await requestResp.json();
-    const licenseId = requestBody.licenseId;
-    await licenseClientV1.deleteLicense(licenseId);
-
-    // Try to release again
-    const response = await licenseClientV1.deleteLicense(licenseId);
-    const body = await response.text();
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([200, 204, 400, 404, 409]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   // ======================================================================

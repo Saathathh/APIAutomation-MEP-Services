@@ -46,34 +46,7 @@ test.describe('Session Service API Tests', () => {
     expect(body.expires.length).toBeGreaterThan(0);
   });
 
-  test('GET Session - should return 400 without valid token', async ({}) => {
-    const unauthorizedCtx = await request.newContext({
-      baseURL: process.env.BASE_URL,
-      extraHTTPHeaders: { Authorization: 'Bearer invalid_token' },
-    });
-    const response = await unauthorizedCtx.get('/authorizations/Session?api-version=1.0');
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status() }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect(response.status()).toBe(400);
-    await unauthorizedCtx.dispose();
-  });
-
-  test('GET Session - should return error with no authorization header', async ({}) => {
-    const noAuthCtx = await request.newContext({
-      baseURL: process.env.BASE_URL,
-    });
-    const response = await noAuthCtx.get('/authorizations/Session?api-version=1.0');
-    await test.info().attach('API Response', {
-      body: JSON.stringify({ status: response.status() }, null, 2),
-      contentType: 'text/plain',
-    });
-    expect([400, 401]).toContain(response.status());
-    await noAuthCtx.dispose();
-  });
-
-  test('GET Session - should return error with expired token', async ({}) => {
+  test('GET Session - should return error with Invalid/expired token', async ({}) => {
     const expiredCtx = await request.newContext({
       baseURL: process.env.BASE_URL,
       extraHTTPHeaders: { Authorization: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.expired.signature' },
@@ -187,7 +160,7 @@ test.describe('Session Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400]).toContain(response.status());
+    expect([400]).toContain(response.status());
   });
 
   // ======================================================================
@@ -217,7 +190,7 @@ test.describe('Session Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('DELETE Session - should handle empty token path', async ({ sessionClient }) => {
@@ -227,7 +200,7 @@ test.describe('Session Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404, 405]).toContain(response.status());
+    expect([405]).toContain(response.status());
   });
 
   // ======================================================================

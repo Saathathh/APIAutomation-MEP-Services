@@ -213,7 +213,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 422]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('POST Create Role - should handle non-existent UUID', async ({ roleClient }) => {
@@ -223,7 +223,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('POST Create Role - should handle invalid UUID format', async ({ roleClient }) => {
@@ -233,7 +233,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('POST Create Role - should handle duplicate role creation', async ({ roleClient }) => {
@@ -246,7 +246,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 409]).toContain(response.status());
+    expect([200]).toContain(response.status());
     // Cleanup
     await roleClient.deleteRole(ROLE_UUID, CREATE_ROLE_PAYLOAD);
   });
@@ -303,7 +303,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('POST Delete Role - should handle non-existent UUID', async ({ roleClient }) => {
@@ -313,7 +313,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   test('POST Delete Role - should handle empty role names array', async ({ roleClient }) => {
@@ -323,7 +323,7 @@ test.describe('Role Service API Tests', () => {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 422]).toContain(response.status());
+    expect([200]).toContain(response.status());
   });
 
   // ======================================================================

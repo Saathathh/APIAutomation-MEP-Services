@@ -6,7 +6,9 @@ import { AUTH_TEST_DATA } from '../../../../../utilities/testData';
 const PRODUCT_PAYLOAD = AUTH_TEST_DATA.productPayload;
 
 test.describe('Product Service API Tests', () => {
+  let registeredProductId: string;
 
+  test.describe.configure({ mode: 'serial' });
   // ---- Endpoint 1: PUT /Product — Register product ----
 
   test('PUT Register Product - should return 200 with valid payload', async ({ productClient }) => {
@@ -17,6 +19,8 @@ test.describe('Product Service API Tests', () => {
       contentType: 'text/plain',
     });
     expect(response.status()).toBe(200);
+    const parsed = tryParseJson(body) as Record<string, unknown> | null;
+    registeredProductId = (parsed?.id as string) || PRODUCT_PAYLOAD.id;
   });
 
   test('PUT Register Product - should validate response schema', async ({ productClient }) => {
@@ -60,11 +64,15 @@ test.describe('Product Service API Tests', () => {
   // ---- Endpoint 2: GET /Product/{id} — Get product ----
 
   test('GET Product - should return 200 for registered product', async ({ productClient }) => {
-    // First register the product
-    await productClient.registerProduct(PRODUCT_PAYLOAD);
+    // First register the product if not already done
+    if (!registeredProductId) {
+      const regResponse = await productClient.registerProduct(PRODUCT_PAYLOAD);
+      const regBody = await regResponse.json();
+      registeredProductId = regBody.id;
+    }
 
-    // Then fetch it by ID
-    const response = await productClient.getProduct(PRODUCT_PAYLOAD.id);
+    // Then fetch it by the ID returned from registration
+    const response = await productClient.getProduct(registeredProductId);
     const body = await response.text();
     await test.info().attach('API Response', {
       body: JSON.stringify({ status: response.status(), body: tryParseJson(body) }, null, 2),

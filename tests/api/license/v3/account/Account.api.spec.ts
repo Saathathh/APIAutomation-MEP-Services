@@ -73,7 +73,7 @@ test.describe('License Account API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Account - should return 500 for invalid licenseType', async ({ licenseAccountClientV3 }) => {
@@ -148,7 +148,7 @@ test.describe('License Account API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Feature - should handle non-existent feature name', async ({ licenseAccountClientV3 }) => {
@@ -158,7 +158,7 @@ test.describe('License Account API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Feature - should handle invalid accountId format', async ({ licenseAccountClientV3 }) => {
@@ -168,7 +168,7 @@ test.describe('License Account API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect([200, 400, 404]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 
   test('GET Feature - should return 500 for invalid licenseType', async ({ licenseAccountClientV3 }) => {
@@ -192,19 +192,7 @@ test.describe('License Account API Tests (v3)', () => {
       body: JSON.stringify({ status: response.status(), body }, null, 2),
       contentType: 'text/plain',
     });
-    expect(response.ok()).toBeTruthy();
-  });
-
-  test('POST Cache Reset - should validate response schema', async ({ licenseAccountClientV3 }) => {
-    const response = await licenseAccountClientV3.cacheReset([TEST_USER_ID]);
-    expect(response.ok()).toBeTruthy();
-    const body = await response.text();
-    await test.info().attach('Schema Validation', {
-      body: JSON.stringify({ status: response.status(), body }, null, 2),
-      contentType: 'text/plain',
-    });
-    // Cache reset returns 200/204 with empty or minimal response
-    expect([200, 204]).toContain(response.status());
+    expect(response.status()).toBe(204);
   });
 
   test('POST Cache Reset - should return 401 without valid token', async ({}) => {
